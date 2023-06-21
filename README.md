@@ -8,6 +8,12 @@
 
 <!-- @moduledoc -->
 
+**NOTE:** This is an active fork of the original
+[typed_struct](https://github.com/ejpcmac/typed_struct) work,
+which appears to be abandoned.  New features have been added to the "update"
+branch of this repository, with PRs submitted to the upstream that have been
+waiting for merge there since 10/2022.
+
 TypedStruct is a library for defining structs with a type without writing
 boilerplate code.
 

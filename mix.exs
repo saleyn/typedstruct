@@ -7,7 +7,7 @@ defmodule TypedStruct.MixProject do
   def project do
     [
       app: :typedstruct,
-      version: @version <> dev(),
+      version: @version <> dev(System.get_env("HEX_PUBLISH", "")),
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -50,11 +50,10 @@ defmodule TypedStruct.MixProject do
       {:excoveralls, ">= 0.0.0", only: :test, runtime: false},
       {:mix_test_watch, ">= 0.0.0", only: :test, runtime: false},
       {:ex_unit_notifier, ">= 0.0.0", only: :test, runtime: false},
-
       # Project dependencies
 
       # Documentation dependencies
-      {:ex_doc, ">= 0.0.0", only: :docs, runtime: false}
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
     ]
   end
 
@@ -112,6 +111,7 @@ defmodule TypedStruct.MixProject do
 
   # Helper to add a development revision to the version. Do NOT make a call to
   # Git this way in a production release!!
+  def dev(hex) when hex != "", do: ""
   def dev do
     with {rev, 0} <-
            System.cmd("git", ["rev-parse", "--short", "HEAD"],

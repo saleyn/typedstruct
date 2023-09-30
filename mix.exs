@@ -111,7 +111,7 @@ defmodule TypedStruct.MixProject do
   # Helper to add a development revision to the version. Do NOT make a call to
   # Git this way in a production release!!
   def dev(hex) when hex != "", do: ""
-  def dev do
+  def dev(_) do
     with {rev, 0} <-
            System.cmd("git", ["rev-parse", "--short", "HEAD"],
              stderr_to_stdout: true

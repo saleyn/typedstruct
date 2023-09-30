@@ -1,16 +1,17 @@
 defmodule TypedStruct.MixProject do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.3.1"
   @repo_url "https://github.com/ejpcmac/typed_struct"
 
   def project do
     [
       app: :typed_struct,
-      version: @version,
+      version: @version <> dev(),
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      elixirc_paths: elixirc_paths(),
 
       # Tools
       dialyzer: dialyzer(),
@@ -55,6 +56,10 @@ defmodule TypedStruct.MixProject do
       # Documentation dependencies
       {:ex_doc, ">= 0.0.0", only: :docs, runtime: false}
     ]
+  end
+
+  defp elixirc_paths() do
+    if Mix.env() == :test, do: ["lib", "test"], else: ["lib"]
   end
 
   # Dialyzer configuration

@@ -1,10 +1,10 @@
 # TypedStruct
 
-[![Build Status](https://travis-ci.com/ejpcmac/typed_struct.svg?branch=develop)](https://travis-ci.com/ejpcmac/typed_struct)
-[![hex.pm version](https://img.shields.io/hexpm/v/typed_struct.svg?style=flat)](https://hex.pm/packages/typed_struct)
+[![Build Status](https://travis-ci.com/ejpcmac/typedstruct.svg?branch=develop)](https://travis-ci.com/ejpcmac/typed_struct)
+[![hex.pm version](https://img.shields.io/hexpm/v/typedstruct.svg?style=flat)](https://hex.pm/packages/typed_struct)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/typed_struct/)
-[![Total Download](https://img.shields.io/hexpm/dt/typed_struct.svg?style=flat)](https://hex.pm/packages/typed_struct)
-[![License](https://img.shields.io/hexpm/l/typed_struct.svg?style=flat)](https://github.com/ejpcmac/typed_struct/blob/master/LICENSE.md)
+[![Total Download](https://img.shields.io/hexpm/dt/typedstruct.svg?style=flat)](https://hex.pm/packages/typed_struct)
+[![License](https://img.shields.io/hexpm/l/typedstruct.svg?style=flat)](https://github.com/ejpcmac/typed_struct/blob/master/LICENSE.md)
 
 <!-- @moduledoc -->
 
@@ -16,6 +16,10 @@ waiting for merge there since 10/2022.
 
 TypedStruct is a library for defining structs with a type without writing
 boilerplate code.
+
+This fork supersedes the original work of Jean-Philippe Cugnet, which seems
+to be no longer maintained.  This version adds type information to Erlang
+records and makes the project compile under OTP-26 and later.
 
 ## Rationale
 
@@ -139,6 +143,21 @@ end
 Each field is defined through the
 [`field/2`](https://hexdocs.pm/typed_struct/TypedStruct.html#field/2) macro.
 
+To define a record use the `typedrecord` block:
+
+```elixir
+defmodule Person do
+  use TypedStruct
+
+  typedrecord :person do
+    @typedoc "A person"
+
+    field :name, String.t(),
+    field :age,  non_neg_integer(), default: 0
+  end
+end
+```
+
 ### Options
 
 If you want to enforce all the keys by default, you can do:
@@ -160,15 +179,26 @@ defmodule MyStruct do
   end
 end
 ```
-
-You can also generate an opaque type for the struct:
+You can also generate an opaque or private type for the struct by using
+the `visibility: :opaque | :private | :public` option:
 
 ```elixir
 defmodule MyOpaqueStruct do
   use TypedStruct
 
   # Generate an opaque type for the struct.
-  typedstruct opaque: true do
+  typedstruct visibility: :opaque do
+    field :name, String.t()
+  end
+end
+```
+
+```elixir
+defmodule MyPrivateStruct do
+  use TypedStruct
+
+  # Generate a private type for the struct.
+  typedstruct visibility: :private do
     field :name, String.t()
   end
 end
@@ -242,6 +272,8 @@ defmodule MyStruct do
   end
 end
 ```
+
+Presently plugins are not supported by the `typedrecord` block.
 
 ### Some available plugins
 
@@ -379,6 +411,29 @@ defmodule MyModule do
             field: term() | nil
           }
   end
+end
+```
+
+To define a typed record, the following definition of the `typedrecord`:
+
+```elixir
+defmodule Person do
+  use TypedStruct
+  typedrecord :person do
+    @typedoc "A person"
+    field :name, String.t()
+    field :age,  non_neg_integer(), default: 0
+  end
+end
+```
+
+becomes:
+
+```elixir
+defmodule Person do
+  use Record
+  Record.defrecord(:person, name: nil, age: 0)
+  @type person :: {:person, String.t()|nil, non_neg_integer()}
 end
 ```
 

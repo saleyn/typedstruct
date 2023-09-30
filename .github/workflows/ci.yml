@@ -40,8 +40,6 @@ jobs:
           #   - oldest Elixir on the first and last supported OTP versions,
           #   - other Elixir version on the last supported OTP version.
           - elixir: "1.14"
-            otp: "23.3"
-          - elixir: "1.14"
             otp: "24.3"
           - elixir: "1.14"
             otp: "25.0"

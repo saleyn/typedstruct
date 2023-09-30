@@ -9,7 +9,7 @@ defmodule TypedStruct.MixProject do
       app: :typedstruct,
       version: @version <> dev(System.get_env("HEX_PUBLISH", "")),
       elixir: "~> 1.13",
-      start_permanent: Mix.env() == :prod,
+      start_permanent: false,
       deps: deps(),
       elixirc_paths: elixirc_paths(),
 
@@ -41,6 +41,12 @@ defmodule TypedStruct.MixProject do
     ]
   end
 
+  def application do
+    [
+      extra_applications: [:public_key, :syntax_tools]
+    ]
+  end
+
   defp deps do
     [
       # Development and test dependencies
@@ -53,12 +59,11 @@ defmodule TypedStruct.MixProject do
       # Project dependencies
 
       # Documentation dependencies
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
 
-  defp elixirc_paths(), do:
-    Mix.env() == :test && ["lib", "test"] || ["lib"]
+  defp elixirc_paths(), do: (Mix.env() == :test && ["lib", "test"]) || ["lib"]
 
   # Dialyzer configuration
   defp dialyzer do
@@ -69,8 +74,7 @@ defmodule TypedStruct.MixProject do
       plt_add_deps: :app_tree,
       flags: [
         :unmatched_returns,
-        :error_handling,
-        :race_conditions
+        :error_handling
       ],
       ignore_warnings: ".dialyzer_ignore"
     ]
@@ -111,6 +115,7 @@ defmodule TypedStruct.MixProject do
   # Helper to add a development revision to the version. Do NOT make a call to
   # Git this way in a production release!!
   def dev(hex) when hex != "", do: ""
+
   def dev(_) do
     with {rev, 0} <-
            System.cmd("git", ["rev-parse", "--short", "HEAD"],

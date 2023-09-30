@@ -154,7 +154,8 @@ defmodule TypedStruct.PluginTest do
                  if(Version.compare(System.version(), "1.14.9") == :lt,
                    do: ~r"undefined function function_from_plugin/0",
                    else:
-                     ~r"cannot compile module TypedStruct.PluginTest.UseImportedFunctionOutsideOfBlock"
+                     ~r"cannot compile module " <>
+                     "TypedStruct.PluginTest.UseImportedFunctionOutsideOfBlock"
                  ),
                  fn ->
                    capture_io(:stderr, fn ->

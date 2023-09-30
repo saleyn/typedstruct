@@ -167,5 +167,4 @@ defmodule TypedStructTest do
 
     assert type1 == type2
   end
-
 end

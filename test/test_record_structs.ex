@@ -1,5 +1,8 @@
 defmodule TypedRecord.Record do
+  @moduledoc false
+
   defmodule Actual do
+    @moduledoc false
     use TypedStruct
 
     typedrecord :user do
@@ -11,6 +14,7 @@ defmodule TypedRecord.Record do
   end
 
   defmodule Expected do
+    @moduledoc false
     require Record
     Record.defrecord(:user, one: 1, two: nil, three: "def", four: :hi)
 
@@ -19,7 +23,10 @@ defmodule TypedRecord.Record do
 end
 
 defmodule TypedRecord.Public do
+  @moduledoc false
+
   defmodule Actual do
+    @moduledoc false
     use TypedStruct
 
     typedrecord :user, tag: User do
@@ -31,6 +38,7 @@ defmodule TypedRecord.Public do
   end
 
   defmodule Expected do
+    @moduledoc false
     require Record
     Record.defrecord(:user, User, one: 1, two: nil, three: "def", four: :hi)
 
@@ -39,7 +47,10 @@ defmodule TypedRecord.Public do
 end
 
 defmodule TypedRecord.VisibilityPublic do
+  @moduledoc false
+
   defmodule Actual do
+    @moduledoc false
     use TypedStruct
 
     typedrecord :user, visibility: :public do
@@ -51,6 +62,7 @@ defmodule TypedRecord.VisibilityPublic do
   end
 
   defmodule Expected do
+    @moduledoc false
     require Record
     Record.defrecord(:user, one: 1, two: nil, three: "def", four: :hi)
 
@@ -59,7 +71,10 @@ defmodule TypedRecord.VisibilityPublic do
 end
 
 defmodule TypedRecord.VisibilityOpaque do
+  @moduledoc false
+
   defmodule Actual do
+    @moduledoc false
     use TypedStruct
 
     typedrecord :user, visibility: :opaque do
@@ -68,15 +83,19 @@ defmodule TypedRecord.VisibilityOpaque do
   end
 
   defmodule Expected do
+    @moduledoc false
     require Record
     Record.defrecord(:user, int: 1)
 
-    @opaque user() :: {:user, integer()|nil}
+    @opaque user() :: {:user, integer() | nil}
   end
 end
 
 defmodule TypedRecord.VisibilityPrivate do
+  @moduledoc false
+
   defmodule Actual do
+    @moduledoc false
     use TypedStruct
 
     typedrecord :user, visibility: :private do
@@ -88,15 +107,18 @@ defmodule TypedRecord.VisibilityPrivate do
   end
 
   defmodule Expected do
+    @moduledoc false
     require Record
     Record.defrecord(:user, int: 1)
 
-    @typep user() :: {:user, integer()|nil}
+    @typep user() :: {:user, integer() | nil}
     @opaque tt() :: user()
   end
 end
 
 defmodule TypedRecord.TestRecModule do
+  @moduledoc false
+
   use TypedStruct
 
   typedrecord :user, module: Rec do

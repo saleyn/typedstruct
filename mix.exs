@@ -41,12 +41,6 @@ defmodule TypedStruct.MixProject do
     ]
   end
 
-  def application do
-    [
-      extra_applications: [:public_key, :syntax_tools]
-    ]
-  end
-
   defp deps do
     [
       # Development and test dependencies

@@ -13,47 +13,47 @@ defmodule TypedRecordTest do
   end
 
   test "generates a type for the record in default case" do
-    type1 = standardize_1st_type(TypedRecord.Record.Actual)
-    type2 = standardize_1st_type(TypedRecord.Record.Expected)
+    type1 = standardize_first_type(TypedRecord.Record.Actual)
+    type2 = standardize_first_type(TypedRecord.Record.Expected)
 
     assert type1 == type2
   end
 
   test "generates a type for the record in default case with a record tag" do
-    type1 = standardize_1st_type(TypedRecord.Public.Actual)
-    type2 = standardize_1st_type(TypedRecord.Public.Expected)
+    type1 = standardize_first_type(TypedRecord.Public.Actual)
+    type2 = standardize_first_type(TypedRecord.Public.Expected)
 
     assert type1 == type2
   end
 
   test "generates a type for the record with the `visibility: :public`" do
-    type1 = standardize_1st_type(TypedRecord.VisibilityPublic.Actual)
-    type2 = standardize_1st_type(TypedRecord.VisibilityPublic.Expected)
+    type1 = standardize_first_type(TypedRecord.VisibilityPublic.Actual)
+    type2 = standardize_first_type(TypedRecord.VisibilityPublic.Expected)
 
     assert type1 == type2
   end
 
   test "generates an opaque type if `visibility: :opaque` is set" do
-    type1 = standardize_1st_type(TypedRecord.VisibilityOpaque.Actual, :opaque)
+    type1 = standardize_first_type(TypedRecord.VisibilityOpaque.Actual, :opaque)
 
     type2 =
-      standardize_1st_type(TypedRecord.VisibilityOpaque.Expected, :opaque)
+      standardize_first_type(TypedRecord.VisibilityOpaque.Expected, :opaque)
 
     assert type1 == type2
   end
 
   test "generates a private type if `visibility: private` is set" do
-    type1 = standardize_1st_type(TypedRecord.VisibilityPrivate.Actual, :typep)
+    type1 = standardize_first_type(TypedRecord.VisibilityPrivate.Actual, :typep)
 
     type2 =
-      standardize_1st_type(TypedRecord.VisibilityPrivate.Expected, :typep)
+      standardize_first_type(TypedRecord.VisibilityPrivate.Expected, :typep)
 
     assert type1 == type2
   end
 
   test "generates the struct in a submodule if `module: ModuleName` is set" do
     require TypedRecord.TestRecModule.Rec
-    alias   TypedRecord.TestRecModule.Rec
+    alias TypedRecord.TestRecModule.Rec
     assert Rec.user() == {:user, 1}
   end
 

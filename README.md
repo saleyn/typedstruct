@@ -1,6 +1,6 @@
 # TypedStruct
 
-[![Build Status](https://travis-ci.com/saleyn/typedstruct.svg?branch=develop)](https://travis-ci.com/saleyn/typedstruct)
+[![Build Status](https://github.com/saleyn/typedstruct/actions/workflows/ci.yml/badge.svg)](https://github.com/saleyn/typedstruct/actions/workflows/ci.yml)
 [![hex.pm version](https://img.shields.io/hexpm/v/typedstruct.svg?style=flat)](https://hex.pm/packages/typedstruct)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/typedstruct/)
 [![Total Download](https://img.shields.io/hexpm/dt/typedstruct.svg?style=flat)](https://hex.pm/packages/typedstruct)

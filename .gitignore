@@ -15,8 +15,8 @@
 # Elixir binary files
 *.beam
 *.ez
-/typed_struct-*.tar
-/typed_struct
+/typedstruct-*.tar
+/typedstruct
 
 # Test coverage and documentation
 /cover/

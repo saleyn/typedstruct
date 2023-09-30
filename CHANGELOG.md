@@ -109,7 +109,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 * Default values
 * Enforced keys
 
-[Unreleased]: https://github.com/ejpcmac/typed_struct/compare/main...develop
+[Unreleased]: https://github.com/saleyn/typedstruct/compare/main...develop
+[0.5.0]: https://github.com/saleyn/typedstruct/compare/v0.3.0...v0.5.0
 [0.3.0]: https://github.com/ejpcmac/typed_struct/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/ejpcmac/typed_struct/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/ejpcmac/typed_struct/compare/v0.1.4...v0.2.0

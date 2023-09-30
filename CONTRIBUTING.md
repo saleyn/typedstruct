@@ -19,12 +19,12 @@ detailed below.
 
 2. Clone your fork to a local repository:
 
-        $ git clone https://github.com/you/typed_struct.git
-        $ cd typed_struct
+        $ git clone https://github.com/you/typedstruct.git
+        $ cd typedstruct
 
 3. Add the main repository as a remote:
 
-        $ git remote add upstream https://github.com/ejpcmac/typed_struct.git
+        $ git remote add upstream https://github.com/ejpcmac/typedstruct.git
 
 4. Checkout `develop`:
 
@@ -56,13 +56,13 @@ Install an Elixir environment, and optionally install `git-flow`.
 3. In the project directory, if you **did not** install direnv, start a Nix
    shell:
 
-        $ cd typed_struct
+        $ cd typedstruct
         $ nix-shell
 
     If you opted to use direnv, please allow the `.envrc` instead of running a
     Nix shell manually:
 
-        $ cd typed_struct
+        $ cd typedstruct
         $ direnv allow
 
     In this case, direnv will automatically update your environment to behave
@@ -79,7 +79,7 @@ run:
 
 1. Fetch the project dependencies:
 
-        $ cd typed_struct
+        $ cd typedstruct
         $ mix deps.get
 
 2. Run the static analyzers:

@@ -1,14 +1,14 @@
 defmodule TypedStruct.MixProject do
   use Mix.Project
 
-  @version "0.3.1"
-  @repo_url "https://github.com/ejpcmac/typed_struct"
+  @version "0.5.0"
+  @repo_url "https://github.com/saleyn/typedstruct"
 
   def project do
     [
-      app: :typed_struct,
+      app: :typedstruct,
       version: @version <> dev(),
-      elixir: "~> 1.6",
+      elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       elixirc_paths: elixirc_paths(),
@@ -81,7 +81,7 @@ defmodule TypedStruct.MixProject do
   defp plt_file do
     case System.get_env("PLT_DIR") do
       nil -> nil
-      plt_dir -> {:no_warn, Path.join(plt_dir, "typed_struct.plt")}
+      plt_dir -> {:no_warn, Path.join(plt_dir, "typedstruct.plt")}
     end
   end
 
@@ -104,7 +104,7 @@ defmodule TypedStruct.MixProject do
     [
       licenses: ["MIT"],
       links: %{
-        "Changelog" => "https://hexdocs.pm/typed_struct/changelog.html",
+        "Changelog" => "https://hexdocs.pm/typedstruct/changelog.html",
         "GitHub" => @repo_url
       }
     ]

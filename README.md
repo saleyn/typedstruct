@@ -1,15 +1,15 @@
 # TypedStruct
 
-[![Build Status](https://travis-ci.com/ejpcmac/typedstruct.svg?branch=develop)](https://travis-ci.com/ejpcmac/typed_struct)
-[![hex.pm version](https://img.shields.io/hexpm/v/typedstruct.svg?style=flat)](https://hex.pm/packages/typed_struct)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/typed_struct/)
-[![Total Download](https://img.shields.io/hexpm/dt/typedstruct.svg?style=flat)](https://hex.pm/packages/typed_struct)
-[![License](https://img.shields.io/hexpm/l/typedstruct.svg?style=flat)](https://github.com/ejpcmac/typed_struct/blob/master/LICENSE.md)
+[![Build Status](https://travis-ci.com/saleyn/typedstruct.svg?branch=develop)](https://travis-ci.com/saleyn/typedstruct)
+[![hex.pm version](https://img.shields.io/hexpm/v/typedstruct.svg?style=flat)](https://hex.pm/packages/typedstruct)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/typedstruct/)
+[![Total Download](https://img.shields.io/hexpm/dt/typedstruct.svg?style=flat)](https://hex.pm/packages/typedstruct)
+[![License](https://img.shields.io/hexpm/l/typedstruct.svg?style=flat)](https://github.com/saleyn/typedstruct/blob/master/LICENSE.md)
 
 <!-- @moduledoc -->
 
 **NOTE:** This is an active fork of the original
-[typed_struct](https://github.com/ejpcmac/typed_struct) work,
+[typedstruct](https://github.com/saleyn/typedstruct) work,
 which appears to be abandoned.  New features have been added to the "update"
 branch of this repository, with PRs submitted to the upstream that have been
 waiting for merge there since 10/2022.
@@ -98,7 +98,7 @@ Thanks to TypedStruct, this is now possible :)
 To use TypedStruct in your project, add this to your Mix dependencies:
 
 ```elixir
-{:typed_struct, "~> 0.3.0"}
+{:typedstruct, "~> 0.5"}
 ```
 
 If you do not plan to compile modules using TypedStruct at runtime, you can add
@@ -111,14 +111,14 @@ you can add to your `.formatter.exs`:
 ```elixir
 [
   ...,
-  import_deps: [:typed_struct]
+  import_deps: [:typedstruct]
 ]
 ```
 
 ### General usage
 
 To define a typed struct, use
-[`TypedStruct`](https://hexdocs.pm/typed_struct/TypedStruct.html), then define
+[`TypedStruct`](https://hexdocs.pm/typedstruct/TypedStruct.html), then define
 your struct within a `typedstruct` block:
 
 ```elixir
@@ -141,7 +141,7 @@ end
 ```
 
 Each field is defined through the
-[`field/2`](https://hexdocs.pm/typed_struct/TypedStruct.html#field/2) macro.
+[`field/2`](https://hexdocs.pm/typedstruct/TypedStruct.html#field/2) macro.
 
 To define a record use the `typedrecord` block:
 
@@ -248,10 +248,10 @@ end
 
 It is possible to extend the scope of TypedStruct by using its plugin interface,
 as described in
-[`TypedStruct.Plugin`](https://hexdocs.pm/typed_struct/TypedStruct.Plugin.html).
+[`TypedStruct.Plugin`](https://hexdocs.pm/typedstruct/TypedStruct.Plugin.html).
 For instance, to automatically generate lenses with the
 [Lens](https://github.com/obrok/lens) library, you can use
-[`TypedStructLens`](https://github.com/ejpcmac/typed_struct_lens) and do:
+[`TypedStructLens`](https://github.com/saleyn/typedstruct_lens) and do:
 
 ```elixir
 defmodule MyStruct do
@@ -277,13 +277,13 @@ Presently plugins are not supported by the `typedrecord` block.
 
 ### Some available plugins
 
-* [`typed_struct_lens`](https://github.com/ejpcmac/typed_struct_lens) –
+* [`typedstruct_lens`](https://github.com/saleyn/typedstruct_lens) –
     Integration with the [Lens](https://github.com/obrok/lens) library.
-* [`typed_struct_legacy_reflection`](https://github.com/ejpcmac/typed_struct_legacy_reflection)
+* [`typedstruct_legacy_reflection`](https://github.com/saleyn/typedstruct_legacy_reflection)
   – Re-enables the legacy reflection functions from TypedStruct 0.1.x.
 
-This list is not meant to be exhaustive, please [search for “typed_struct” on
-hex.pm](https://hex.pm/packages?search=typed_struct) for other results. If you
+This list is not meant to be exhaustive, please [search for “typedstruct” on
+hex.pm](https://hex.pm/packages?search=typedstruct) for other results. If you
 want your plugin to appear here, please open an issue.
 
 ## What do I get?

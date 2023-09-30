@@ -1,15 +1,19 @@
 # TypedStruct
 
-[![Build Status](https://travis-ci.com/ejpcmac/typed_struct.svg?branch=develop)](https://travis-ci.com/ejpcmac/typed_struct)
-[![hex.pm version](https://img.shields.io/hexpm/v/typed_struct.svg?style=flat)](https://hex.pm/packages/typed_struct)
+[![Build Status](https://travis-ci.com/ejpcmac/typedstruct.svg?branch=develop)](https://travis-ci.com/ejpcmac/typed_struct)
+[![hex.pm version](https://img.shields.io/hexpm/v/typedstruct.svg?style=flat)](https://hex.pm/packages/typed_struct)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/typed_struct/)
-[![Total Download](https://img.shields.io/hexpm/dt/typed_struct.svg?style=flat)](https://hex.pm/packages/typed_struct)
-[![License](https://img.shields.io/hexpm/l/typed_struct.svg?style=flat)](https://github.com/ejpcmac/typed_struct/blob/master/LICENSE.md)
+[![Total Download](https://img.shields.io/hexpm/dt/typedstruct.svg?style=flat)](https://hex.pm/packages/typed_struct)
+[![License](https://img.shields.io/hexpm/l/typedstruct.svg?style=flat)](https://github.com/ejpcmac/typed_struct/blob/master/LICENSE.md)
 
 <!-- @moduledoc -->
 
 TypedStruct is a library for defining structs with a type without writing
 boilerplate code.
+
+This fork supersedes the original work of Jean-Philippe Cugnet, which seems
+to be no longer maintained.  This version adds type information to Erlang
+records and makes the project compile under OTP-26 and later.
 
 ## Rationale
 

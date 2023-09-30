@@ -57,9 +57,8 @@ defmodule TypedStruct.MixProject do
     ]
   end
 
-  defp elixirc_paths() do
-    if Mix.env() == :test, do: ["lib", "test"], else: ["lib"]
-  end
+  defp elixirc_paths(), do:
+    Mix.env() == :test && ["lib", "test"] || ["lib"]
 
   # Dialyzer configuration
   defp dialyzer do

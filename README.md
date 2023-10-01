@@ -7,16 +7,11 @@
 
 <!-- @moduledoc -->
 
-**NOTE:** This is an active fork of the original
-[typedstruct](https://github.com/saleyn/typedstruct) work,
-which appears to be abandoned.  New features have been added to the "update"
-branch of this repository, with PRs submitted to the upstream that have been
-waiting for merge there since 10/2022.
-
 TypedStruct is a library for defining structs with a type without writing
 boilerplate code.
 
-This fork supersedes the original work of Jean-Philippe Cugnet, which seems
+**NOTE:** This is an active fork of the original
+[typedstruct](https://github.com/saleyn/typedstruct) work by Jean-Philippe Cugnet, which seems
 to be no longer maintained.  This version adds type information to Erlang
 records and makes the project compile under OTP-26 and later.
 

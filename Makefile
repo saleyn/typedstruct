@@ -7,6 +7,6 @@ check compile:
 	mix $@
 
 publish:
-	HEX_PUBLISH=1 mix hex.publish $(if $(replace),--replace)
+	VERBATIM_VERSION=1 mix hex.publish $(if $(replace),--replace)
 
 .PHONY: deps

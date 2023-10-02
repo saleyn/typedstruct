@@ -7,7 +7,7 @@ defmodule TypedStruct.MixProject do
   def project do
     [
       app: :typedstruct,
-      version: @version <> dev(System.get_env("HEX_PUBLISH", "")),
+      version: dev(System.get_env("VERBATIM_VERSION", "")),
       elixir: "~> 1.13",
       start_permanent: false,
       deps: deps(),
@@ -108,18 +108,17 @@ defmodule TypedStruct.MixProject do
 
   # Helper to add a development revision to the version. Do NOT make a call to
   # Git this way in a production release!!
-  def dev(hex) when hex != "", do: ""
-
-  def dev(_) do
-    with {rev, 0} <-
-           System.cmd("git", ["rev-parse", "--short", "HEAD"],
+  defp dev(verbatim) when verbatim == "1" or verbatim == "true", do: @version
+  defp dev(_) do
+    with {ver, 0} <-
+           System.cmd("git", ~w(describe --always --tags --long),
              stderr_to_stdout: true
-           ),
-         {status, 0} <- System.cmd("git", ["status", "--porcelain"]) do
-      status = if status == "", do: "", else: "-dirty"
-      "-dev+" <> String.trim(rev) <> status
-    else
-      _ -> "-dev"
+           ) do
+      ver
+      |> String.trim()
+      |> String.replace(~r/^v/, "")
+    else _ ->
+      @version
     end
   end
 end

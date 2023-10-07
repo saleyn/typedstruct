@@ -1,13 +1,13 @@
 defmodule TypedStruct.MixProject do
   use Mix.Project
 
-  @version "0.5.1"
+  #@version "0.5.1"
   @repo_url "https://github.com/saleyn/typedstruct"
 
   def project do
     [
       app: :typedstruct,
-      version: dev(System.get_env("VERBATIM_VERSION", "")),
+      version: vsn(),
       elixir: "~> 1.13",
       start_permanent: false,
       deps: deps(),
@@ -111,8 +111,7 @@ defmodule TypedStruct.MixProject do
   # ".hex" file, which contains the version.  If it's loaded from git, then
   # we can use "git describe" command to format the version with a revision.
   # Otherwise use a verbatim version from the attribute.
-  defp dev(verbatim) when verbatim == "1" or verbatim == "true", do: @version
-  defp dev(_) do
+  defp vsn() do
     hex_spec = Mix.Project.deps_path() |> Path.dirname() |> Path.join(".hex")
     version =
       if File.exists?(hex_spec) do
@@ -130,7 +129,7 @@ defmodule TypedStruct.MixProject do
           |> String.trim()
           |> String.replace(~r/^v/, "")
         else _ ->
-          @version
+          raise "Cannot determine application version!"
         end
       end
     version

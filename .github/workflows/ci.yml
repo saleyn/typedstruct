@@ -40,11 +40,11 @@ jobs:
           #   - oldest Elixir on the first and last supported OTP versions,
           #   - other Elixir version on the last supported OTP version.
           - elixir: "1.14"
-            otp: "24.3"
-          - elixir: "1.14"
             otp: "25.0"
           - elixir: "1.15"
             otp: "26.0"
+          - elixir: "1.15.6"
+            otp: "26.1.1"
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4

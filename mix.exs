@@ -112,6 +112,17 @@ defmodule TypedStruct.MixProject do
   # ".hex" file, which contains the version.  If it's loaded from git, then
   # we can use "git describe" command to format the version with a revision.
   # Otherwise use a verbatim version from the attribute.
+  #
+  # NOTE: with this method of calculating the version number, you need to make
+  # sure that in the Github action the checkout includes:
+  # ```
+  #   - name: Checkout the repository
+  #     uses: actions/checkout@v4
+  #     with:
+  #       fetch-depth: 0
+  # ```
+  # This ensures that the git history is checked out with tags so that
+  # `git describe --tags` returns the proper version number.
   defp vsn() do
     hex_spec = Mix.Project.deps_path() |> Path.dirname() |> Path.join(".hex")
     version =

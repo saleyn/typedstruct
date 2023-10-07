@@ -123,7 +123,7 @@ defmodule TypedStruct.MixProject do
         |> Map.get(:version)
       else
         with {ver, 0} <-
-              System.cmd("git", ~w(describe --always --tags --long),
+              System.cmd("git", ~w(describe --always --tags),
                 stderr_to_stdout: true
               ) do
           ver

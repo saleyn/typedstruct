@@ -106,19 +106,33 @@ defmodule TypedStruct.MixProject do
     ]
   end
 
-  # Helper to add a development revision to the version. Do NOT make a call to
-  # Git this way in a production release!!
+  # Obtain the version of this library
+  # If it's loaded as a dependency from Hex.pm, then the project contains
+  # ".hex" file, which contains the version.  If it's loaded from git, then
+  # we can use "git describe" command to format the version with a revision.
+  # Otherwise use a verbatim version from the attribute.
   defp dev(verbatim) when verbatim == "1" or verbatim == "true", do: @version
   defp dev(_) do
-    with {ver, 0} <-
-           System.cmd("git", ~w(describe --always --tags --long),
-             stderr_to_stdout: true
-           ) do
-      ver
-      |> String.trim()
-      |> String.replace(~r/^v/, "")
-    else _ ->
-      @version
-    end
+    hex_spec = Mix.Project.deps_path() |> Path.dirname() |> Path.join(".hex")
+    version =
+      if File.exists?(hex_spec) do
+        hex_spec
+        |> File.read!()
+        |> :erlang.binary_to_term()
+        |> elem(1)
+        |> Map.get(:version)
+      else
+        with {ver, 0} <-
+              System.cmd("git", ~w(describe --always --tags --long),
+                stderr_to_stdout: true
+              ) do
+          ver
+          |> String.trim()
+          |> String.replace(~r/^v/, "")
+        else _ ->
+          @version
+        end
+      end
+    version
   end
 end

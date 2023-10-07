@@ -5,9 +5,10 @@ defmodule TypedStruct.MixProject do
   @repo_url "https://github.com/saleyn/typedstruct"
 
   def project do
+    version = vsn()
     [
       app: :typedstruct,
-      version: vsn(),
+      version: version,
       elixir: "~> 1.13",
       start_permanent: false,
       deps: deps(),
@@ -29,7 +30,7 @@ defmodule TypedStruct.MixProject do
         ],
         main: "readme",
         source_url: @repo_url,
-        source_ref: "v#{@version}",
+        source_ref: "v#{version}",
         formatters: ["html"]
       ],
 

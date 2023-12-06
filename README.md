@@ -275,6 +275,12 @@ Presently plugins are not supported by the `typedrecord` block.
     Integration with the [Lens](https://github.com/obrok/lens) library.
 * [`typedstruct_legacy_reflection`](https://github.com/saleyn/typedstruct_legacy_reflection)
   – Re-enables the legacy reflection functions from TypedStruct 0.1.x.
+* [`typed_struct_ctor`](https://hexdocs.pm/typed_struct_ctor/TypedStructCtor.html)
+  – Adds validating (`new` and `from`) constructor functions.
+  > Try the macro out in real time without having to install or write any of your own code.  
+  > All you need is a running instance of [Livebook](https://livebook.dev/)
+  > 
+  > [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https://github.com/withbelay/typed_struct_ctor/blob/main/try_it_out.livemd)
 
 This list is not meant to be exhaustive, please [search for “typedstruct” on
 hex.pm](https://hex.pm/packages?search=typedstruct) for other results. If you

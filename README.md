@@ -11,7 +11,7 @@ TypedStruct is a library for defining structs with a type without writing
 boilerplate code.
 
 **NOTE:** This is an active fork of the original
-[typedstruct](https://github.com/saleyn/typedstruct) work by Jean-Philippe Cugnet, which seems
+[typedstruct](https://github.com/ejpcmac/typed_struct) work by Jean-Philippe Cugnet, which seems
 to be no longer maintained.  This version adds type information to Erlang
 records and makes the project compile under OTP-26 and later.
 

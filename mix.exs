@@ -124,7 +124,7 @@ defmodule TypedStruct.MixProject do
   # This ensures that the git history is checked out with tags so that
   # `git describe --tags` returns the proper version number.
   defp vsn() do
-    hex_spec = Mix.Project.deps_path() |> Path.dirname() |> Path.join(".hex")
+    hex_spec = Path.join(__DIR__, ".hex")
     version =
       if File.exists?(hex_spec) do
         hex_spec

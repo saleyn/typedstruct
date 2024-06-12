@@ -1,7 +1,7 @@
 defmodule TypedStruct.MixProject do
   use Mix.Project
 
-  #@version "0.5.1"
+  @version "0.5.3"
   @repo_url "https://github.com/saleyn/typedstruct"
 
   def project do
@@ -124,6 +124,25 @@ defmodule TypedStruct.MixProject do
   # This ensures that the git history is checked out with tags so that
   # `git describe --tags` returns the proper version number.
   defp vsn() do
-    "0.5.3"
+    hex_spec = Mix.Project.deps_path() |> Path.dirname() |> Path.join(".hex")
+    if File.exists?(hex_spec) do
+      hex_spec
+      |> File.read!()
+      |> :erlang.binary_to_term()
+      |> elem(1)
+      |> Map.get(:version)
+    else
+      with {ver, 0} <-
+            System.cmd("git", ~w(describe --always --tags),
+              stderr_to_stdout: true
+            ) do
+        ver
+        |> String.trim()
+        |> String.replace(~r/^v/, "")
+      else _ ->
+        #raise "Cannot determine application version!"
+        @version
+      end
+    end
   end
 end

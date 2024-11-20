@@ -145,7 +145,7 @@ defmodule TypedStruct do
       unquote(block)
 
       @enforce_keys @ts_enforce_keys
-      defstruct @ts_fields
+      defstruct Enum.reverse(@ts_fields)
 
       TypedStruct.__struct_type__(@ts_types, unquote(opts))
 

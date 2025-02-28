@@ -30,6 +30,14 @@ defmodule TypedStructTest do
     end
   end
 
+  defmodule TestWithNew do
+    use TypedStruct
+
+    typedstruct new: true do
+      field :field, term()
+    end
+  end
+
   ############################################################################
   ##                             Standard cases                             ##
   ############################################################################
@@ -108,6 +116,11 @@ defmodule TypedStructTest do
 
   test "generates the struct in a submodule if `module: ModuleName` is set" do
     assert TestModule.Struct.__struct__() == %TestModule.Struct{field: nil}
+  end
+
+  test "generates the struct with `new` function" do
+    assert %TestWithNew{field: 1} == TestWithNew.new(field: 1)
+    assert %TestWithNew{field: 1} == TestWithNew.new(%{field: 1})
   end
 
   ############################################################################

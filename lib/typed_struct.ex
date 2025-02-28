@@ -39,6 +39,7 @@ defmodule TypedStruct do
       individual fields.
     * `visibility` - one of the values: `:public` (default), `:private`, `:opaque`.
     * `module` - if set, creates the struct in a submodule named `module`.
+    * `new` - if set to `true`, it will generate `__MODULE__.new(attrs \\ %{}`.
     * `opaque` - (deprecated) if set to true, creates an opaque type for the struct.
 
   ## Examples
@@ -147,6 +148,12 @@ defmodule TypedStruct do
       defstruct @ts_fields
 
       TypedStruct.__struct_type__(@ts_types, unquote(opts))
+
+      if unquote(!!opts[:new]) do
+#        @doc "Initialize the struct with given attributes"
+#        @spec new(map()) :: unquote(__MODULE__).t
+        def new(attrs \\ %{}), do: struct(__MODULE__, attrs)
+      end
     end
   end
 

@@ -178,6 +178,11 @@ defmodule TypedStruct do
         unquote(name),
         unquote(tag)
       )
+
+      # Clean up accumulating attributes after each record definition
+      Enum.each(unquote(@record_accumulating_attrs), fn attr ->
+        Module.delete_attribute(__MODULE__, attr)
+      end)
     end
   end
 

@@ -110,4 +110,23 @@ defmodule TypedRecordTest do
       end
     end
   end
+
+  defmodule MultipleRecords do
+    use TypedStruct
+
+    typedrecord :first do
+      field :a, integer(), default: 42
+    end
+
+    typedrecord :second do
+      field :b, String.t(), default: "hello"
+    end
+  end
+
+  test "multiple typedrecords in the same module" do
+    import MultipleRecords, only: [first: 0, second: 0]
+
+    assert first() == {:first, 42}
+    assert second() == {:second, "hello"}
+  end
 end

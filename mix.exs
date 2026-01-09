@@ -124,13 +124,13 @@ defmodule TypedStruct.MixProject do
   # This ensures that the git history is checked out with tags so that
   # `git describe --tags` returns the proper version number.
   defp vsn() do
-    hex_spec = Mix.Project.deps_path() |> Path.dirname() |> Path.join(".hex")
-    if File.exists?(hex_spec) do
-      hex_spec
-      |> File.read!()
-      |> :erlang.binary_to_term()
+    hex_metadata_config = Mix.Project.deps_path() |> Path.dirname() |> Path.join("hex_metadata.config")
+    if File.exists?(hex_metadata_config) do
+      hex_metadata_config
+      |> :file.consult()
       |> elem(1)
-      |> Map.get(:version)
+      |> List.keyfind("version", 0)
+      |> elem(1)
     else
       with {ver, 0} <-
             System.cmd("git", ~w(describe --always --tags),

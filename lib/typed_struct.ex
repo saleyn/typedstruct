@@ -937,8 +937,6 @@ defmodule TypedStruct do
     plugins = Module.get_attribute(module, :ts_plugins)
     fields = Module.get_attribute(module, :ts_plugin_fields) |> Enum.reverse()
 
-    Enum.each(unquote(@attrs_to_delete), &Module.delete_attribute(module, &1))
-
     fields_block =
       for {plugin, plugin_opts} <- plugins,
           {name, type, field_opts, env} <- fields do
@@ -949,6 +947,9 @@ defmodule TypedStruct do
       for {plugin, plugin_opts} <- plugins do
         plugin.after_definition(plugin_opts)
       end
+
+    # Keep typedstruct attributes available while plugin callbacks run.
+    Enum.each(unquote(@attrs_to_delete), &Module.delete_attribute(module, &1))
 
     quote do
       unquote_splicing(fields_block)

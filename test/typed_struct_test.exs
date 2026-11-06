@@ -107,6 +107,49 @@ defmodule TypedStructTest do
     def docs, do: @moduledoc
   end
 
+  defmodule LegacyReflectionPlugin do
+    def init(_opts), do: quote(do: nil)
+
+    def field(_name, _type, _opts, %Macro.Env{module: module}) do
+      fields = Module.get_attribute(module, :ts_fields)
+      types = Module.get_attribute(module, :ts_types)
+      enforce_keys = Module.get_attribute(module, :ts_enforce_keys)
+
+      if is_nil(fields) or is_nil(types) or is_nil(enforce_keys) do
+        raise "typedstruct attributes were cleaned up before plugin field callback"
+      end
+
+      quote(do: nil)
+    end
+
+    def after_definition(opts) do
+      module = Keyword.fetch!(opts, :module)
+
+      fields = Module.get_attribute(module, :ts_fields)
+      types = Module.get_attribute(module, :ts_types)
+      enforce_keys = Module.get_attribute(module, :ts_enforce_keys)
+
+      if is_nil(fields) or is_nil(types) or is_nil(enforce_keys) do
+        raise "typedstruct attributes were cleaned up before plugin after_definition callback"
+      end
+
+      quote do
+        def legacy_reflection_plugin_loaded?, do: true
+      end
+    end
+  end
+
+  defmodule LegacyReflectionStruct do
+    use TypedStruct
+
+    typedstruct do
+      plugin LegacyReflectionPlugin, module: __MODULE__
+
+      field :id, integer(), enforce: true
+      field :name, String.t(), default: "anonymous"
+    end
+  end
+
   ############################################################################
   ##                             Standard cases                             ##
   ############################################################################
@@ -254,6 +297,10 @@ defmodule TypedStructTest do
 
   test "does not override @moduledoc false when field docs are provided" do
     assert HiddenFieldDocsStruct.docs() == false
+  end
+
+  test "plugin callbacks can read typedstruct attributes before cleanup" do
+    assert LegacyReflectionStruct.legacy_reflection_plugin_loaded?()
   end
 
   ############################################################################

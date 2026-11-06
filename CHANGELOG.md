@@ -33,6 +33,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 * Add validation for unknown top-level options in `typedstruct` and `typedrecord`.
 * Improve duplicate field errors with source line information.
 
+### Fixed
+
+* Preserve internal typedstruct attributes until plugin callbacks finish, fixing
+    reflection plugins that read `:ts_*` attributes during `field/4` and
+    `after_definition/1` callbacks (#9).
+* Verify that issue #15 is fixed.
+
 ## [0.3.0] - 2022-02-15
 
 ### Added

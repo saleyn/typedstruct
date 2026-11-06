@@ -46,10 +46,14 @@ defmodule TypedStruct do
   ]
 
   @doc false
-  defmacro __using__(_) do
+  defmacro __using__(opts) do
+    plugins = Keyword.get(opts, :plugins, [])
+
     quote do
       import TypedStruct,
         only: [typedstruct: 1, typedstruct: 2, typedrecord: 2, typedrecord: 3]
+
+      @typedstruct_default_plugins unquote(plugins)
     end
   end
 
@@ -168,7 +172,16 @@ defmodule TypedStruct do
   """
   defmacro typedstruct(opts \\ [], do: block) do
     TypedStruct.__validate_typedstruct_opts__(opts)
-    ast = TypedStruct.__typedstruct__(block, opts)
+
+    # Get default plugins and inject them into the block at compile time
+    default_plugins =
+      quote do
+        Module.get_attribute(__MODULE__, :typedstruct_default_plugins) || []
+      end
+
+    # Inject default plugins into the block before processing
+    block_with_plugins = TypedStruct.__inject_def_plugins_into_block__(block, default_plugins)
+    ast = TypedStruct.__typedstruct__(block_with_plugins, opts)
 
     case opts[:module] do
       nil ->
@@ -255,6 +268,37 @@ defmodule TypedStruct do
   end
 
   @doc false
+  def __inject_def_plugins_into_block__(block, default_plugins_expr) do
+    # Generate code that registers default plugins.
+    # We just register them in :ts_plugins without calling init, since init
+    # is a macro and can only be called at compile time. Users can call it
+    # manually if they need it, or we generate it for them with a helper.
+
+    plugin_inject_expr =
+      quote do
+        # Get the list of default plugins
+        default_plugins_list = unquote(default_plugins_expr)
+
+        # For each plugin, register it
+        Enum.each(default_plugins_list, fn
+          {plugin_mod, plugin_opts} ->
+            Module.put_attribute(__MODULE__, :ts_plugins, {plugin_mod, plugin_opts})
+
+          plugin_mod ->
+            Module.put_attribute(__MODULE__, :ts_plugins, {plugin_mod, []})
+        end)
+      end
+
+    case block do
+      {:__block__, env_meta, statements} ->
+        {:__block__, env_meta, [plugin_inject_expr | statements]}
+
+      single_statement ->
+        {:__block__, [], [plugin_inject_expr, single_statement]}
+    end
+  end
+
+  @doc false
   def __typedstruct__(block, opts) do
     docs_mode = TypedStruct.__docs_mode__(opts)
     derive_block = __typedstruct_derive_block__(opts)
@@ -270,6 +314,7 @@ defmodule TypedStruct do
       @before_compile {unquote(__MODULE__), :__plugin_callbacks__}
 
       import TypedStruct
+
       unquote(block)
 
       TypedStruct.__append_field_docs__(__MODULE__, unquote(docs_mode))
@@ -297,9 +342,17 @@ defmodule TypedStruct do
       end)
 
       Module.put_attribute(__MODULE__, :ts_strict?, unquote(!!opts[:strict]))
+      @before_compile {unquote(__MODULE__), :__plugin_callbacks__}
 
       import TypedStruct
       require Record
+
+      default_plugins = Module.get_attribute(__MODULE__, :typedstruct_default_plugins) || []
+      for {plugin, plugin_opts} <- default_plugins do
+        Module.put_attribute(__MODULE__, :ts_plugins, {plugin, plugin_opts})
+        Code.require_module(plugin)
+        plugin.init(plugin_opts)
+      end
 
       unquote(block)
       TypedStruct.__append_field_docs__(__MODULE__, unquote(docs_mode))

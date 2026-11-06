@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.5] - 2026-11-06
+## 0.5.5 - 2026-11-06
 
 ### Added
 
@@ -23,6 +23,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 * Add docs merge controls with `docs: :full | :module_only | :fields_only | false`.
 * Add strict mode with `strict: true` for both `typedstruct` and `typedrecord`.
 * Add `derive: [...]` support for `typedstruct`.
+* Add `plugins: [...]` option to `use TypedStruct` to automatically inject default
+    plugins into all `typedstruct` and `typedrecord` definitions. This enables
+    wrapper modules to provide preset plugins without manual configuration per
+    struct definition (#5).
 
 ### Changed
 

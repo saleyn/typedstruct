@@ -406,6 +406,34 @@ defmodule MyStruct do
 end
 ```
 
+#### Default Plugins
+
+You can specify default plugins when using TypedStruct, which will be automatically
+injected into all `typedstruct` and `typedrecord` definitions. This is useful for
+creating wrapper modules that provide preset plugins:
+
+```elixir
+defmodule MyApp.Type do
+  defmacro __using__(_) do
+    quote do
+      use TypedStruct, plugins: [MyApp.TypedStruct.Plugin.EctoTypes]
+    end
+  end
+end
+
+defmodule MyApp.User do
+  use MyApp.Type
+
+  typedstruct do
+    field :id, integer(), enforce: true
+    field :name, String.t(), ecto_type: :string
+  end
+end
+```
+
+Now `MyApp.User` automatically has the `EctoTypes` plugin injected without needing
+to manually call `plugin MyApp.TypedStruct.Plugin.EctoTypes` in the `typedstruct` block.
+
 Presently plugins are not supported by the `typedrecord` block.
 
 ### Some available plugins

@@ -9,6 +9,9 @@ defmodule TypedStruct do
     :ts_plugins,
     :ts_plugin_fields,
     :ts_fields,
+    :ts_field_lines,
+    :ts_field_docs,
+    :ts_dynamic_defaults,
     :ts_types,
     :ts_enforce_keys
   ]
@@ -16,7 +19,31 @@ defmodule TypedStruct do
   @struct_accumulating_attrs @common_accumulating_attrs ++ [:ts_enforce_keys]
   @record_accumulating_attrs @common_accumulating_attrs
 
-  @attrs_to_delete [:ts_enforce? | @struct_accumulating_attrs]
+  @attrs_to_delete [:ts_enforce?, :ts_strict? | @struct_accumulating_attrs]
+
+  @typedstruct_options [
+    :constructors,
+    :derive,
+    :docs,
+    :enforce,
+    :introspection,
+    :module,
+    :new,
+    :opaque,
+    :strict,
+    :visibility
+  ]
+
+  @typedrecord_options [
+    :constructors,
+    :docs,
+    :introspection,
+    :module,
+    :opaque,
+    :strict,
+    :tag,
+    :visibility
+  ]
 
   @doc false
   defmacro __using__(_) do
@@ -39,7 +66,19 @@ defmodule TypedStruct do
       individual fields.
     * `visibility` - one of the values: `:public` (default), `:private`, `:opaque`.
     * `module` - if set, creates the struct in a submodule named `module`.
-    * `new` - if set to `true`, it will generate `__MODULE__.new(attrs \\ %{}`.
+    * `new` - if set to `true`, it will generate `__MODULE__.new(attrs \\ %{})`.
+    * `constructors` - if set to `true`, generates validated constructor helpers:
+      `new/1`, `new!/1`, `from_map/1`, `from_keyword/1`.
+    * `introspection` - if set to `true`, generates reflection helper functions:
+      `__fields__/0`, `__required__/0`, `__defaults__/0`,
+      `__dynamic_defaults__/0`, `__types__/0`.
+    * `strict` - if set to `true`, each field must be enforced or define a default.
+    * `docs` - controls how generated field docs are merged into `@moduledoc`:
+      * `:full` (default) appends a `## Fields` section to existing module docs.
+      * `:module_only` keeps existing module docs and skips generated field docs.
+      * `:fields_only` replaces module docs with the generated `## Fields` section.
+      * `false` disables generated field docs entirely.
+    * `derive` - passes through `@derive` before `defstruct`.
     * `opaque` - (deprecated) if set to true, creates an opaque type for the struct.
 
   ## Examples
@@ -80,8 +119,55 @@ defmodule TypedStruct do
           field :field_four, atom(), default: :hey
         end
       end
+
+  You can derive protocols on the generated struct:
+
+      defmodule Event do
+        use TypedStruct
+
+        typedstruct derive: [Jason.Encoder] do
+          field :id, integer(), enforce: true
+          field :payload, map(), default: %{}
+        end
+      end
+
+  You can generate validated constructors:
+
+      defmodule User do
+        use TypedStruct
+
+        typedstruct constructors: true do
+          field :id, integer(), enforce: true
+          field :name, String.t(), default: "anonymous"
+        end
+      end
+
+      # Generated:
+      # User.new/1
+      # User.new!/1
+      # User.from_map/1
+      # User.from_keyword/1
+
+  You can generate introspection helpers:
+
+      defmodule Account do
+        use TypedStruct
+
+        typedstruct introspection: true do
+          field :id, integer(), enforce: true
+          field :enabled, boolean(), default: true
+        end
+      end
+
+      # Generated:
+      # Account.__fields__/0
+      # Account.__required__/0
+      # Account.__defaults__/0
+      # Account.__dynamic_defaults__/0
+      # Account.__types__/0
   """
   defmacro typedstruct(opts \\ [], do: block) do
+    TypedStruct.__validate_typedstruct_opts__(opts)
     ast = TypedStruct.__typedstruct__(block, opts)
 
     case opts[:module] do
@@ -111,8 +197,45 @@ defmodule TypedStruct do
     * `tag` - if set, used as the `tag` parameter passed to `Record.defrecord/3`.
     * `visibility` - one of the values: `:public` (default), `:private`, `:opaque`.
     * `module` - if set, creates the struct in a submodule named `module`.
+    * `constructors` - if set to `true`, generates validated constructor helpers:
+      `<name>_new/1`, `<name>_new!/1`, `<name>_from_map/1`,
+      `<name>_from_keyword/1`.
+    * `introspection` - if set to `true`, generates reflection helper functions:
+      `<name>_fields/0`, `<name>_required/0`, `<name>_defaults/0`,
+      `<name>_dynamic_defaults/0`, `<name>_types/0`.
+    * `strict` - if set to `true`, each field must be enforced or define a default.
+    * `docs` - controls how generated field docs are merged into `@moduledoc`:
+      * `:full` (default) appends a `## Fields` section to existing module docs.
+      * `:module_only` keeps existing module docs and skips generated field docs.
+      * `:fields_only` replaces module docs with the generated `## Fields` section.
+      * `false` disables generated field docs entirely.
+
+  ## Example
+
+      defmodule People do
+        use TypedStruct
+
+        typedrecord :person, constructors: true, introspection: true do
+          field :id, integer(), enforce: true
+          field :name, String.t(), default: "anonymous"
+        end
+      end
+
+      # Generated constructors:
+      # People.person_new/1
+      # People.person_new!/1
+      # People.person_from_map/1
+      # People.person_from_keyword/1
+
+      # Generated introspection:
+      # People.person_fields/0
+      # People.person_required/0
+      # People.person_defaults/0
+      # People.person_dynamic_defaults/0
+      # People.person_types/0
   """
   defmacro typedrecord(name, opts \\ [], do: block) when is_list(opts) do
+    TypedStruct.__validate_typedrecord_opts__(opts)
     ast = TypedStruct.__typedrecord__(name, block, opts)
 
     case opts[:module] do
@@ -133,43 +256,53 @@ defmodule TypedStruct do
 
   @doc false
   def __typedstruct__(block, opts) do
+    docs_mode = TypedStruct.__docs_mode__(opts)
+    derive_block = __typedstruct_derive_block__(opts)
+    generated_blocks = __typedstruct_generated_blocks__(opts)
+
     quote do
       Enum.each(unquote(@struct_accumulating_attrs), fn attr ->
         Module.register_attribute(__MODULE__, attr, accumulate: true)
       end)
 
       Module.put_attribute(__MODULE__, :ts_enforce?, unquote(!!opts[:enforce]))
+      Module.put_attribute(__MODULE__, :ts_strict?, unquote(!!opts[:strict]))
       @before_compile {unquote(__MODULE__), :__plugin_callbacks__}
 
       import TypedStruct
       unquote(block)
+
+      TypedStruct.__append_field_docs__(__MODULE__, unquote(docs_mode))
+
+      unquote(derive_block)
 
       @enforce_keys @ts_enforce_keys
       defstruct Enum.reverse(@ts_fields)
 
       TypedStruct.__struct_type__(@ts_types, unquote(opts))
 
-      if unquote(!!opts[:new]) do
-#        @doc "Initialize the struct with given attributes"
-#        @spec new(map()) :: unquote(__MODULE__).t
-        def new(attrs \\ %{}), do: struct(__MODULE__, attrs)
-      end
+      unquote_splicing(generated_blocks)
     end
   end
 
   @doc false
   def __typedrecord__(name, block, opts) do
     tag = Keyword.get(opts, :tag, name)
+    docs_mode = TypedStruct.__docs_mode__(opts)
+    generated_blocks = __typedrecord_generated_blocks__(name, tag, opts)
 
     quote do
       Enum.each(unquote(@record_accumulating_attrs), fn attr ->
         Module.register_attribute(__MODULE__, attr, accumulate: true)
       end)
 
+      Module.put_attribute(__MODULE__, :ts_strict?, unquote(!!opts[:strict]))
+
       import TypedStruct
       require Record
 
       unquote(block)
+      TypedStruct.__append_field_docs__(__MODULE__, unquote(docs_mode))
       Record.defrecord(unquote(name), unquote(tag), Enum.reverse(@ts_fields))
 
       TypedStruct.__record_type__(
@@ -178,6 +311,8 @@ defmodule TypedStruct do
         unquote(name),
         unquote(tag)
       )
+
+      unquote_splicing(generated_blocks)
 
       # Clean up accumulating attributes after each record definition
       Enum.each(unquote(@record_accumulating_attrs), fn attr ->
@@ -277,8 +412,11 @@ defmodule TypedStruct do
   ## Options
 
     * `default` - sets the default value for the field
+    * `default_fn` - sets a dynamic default using a remote function capture (`&Mod.fun/0`)
     * `enforce` - if set to true, enforces the field and makes its type
       non-nullable
+    * `doc` - adds field-level documentation to the module docs under
+      a generated "Fields" section
   """
   defmacro field(name, type, opts \\ []) do
     quote bind_quoted: [name: name, type: Macro.escape(type), opts: opts] do
@@ -289,23 +427,18 @@ defmodule TypedStruct do
   @doc false
   def __field__(name, type, opts, %Macro.Env{module: mod} = env)
       when is_atom(name) do
-    if mod |> Module.get_attribute(:ts_fields) |> Keyword.has_key?(name) do
-      raise ArgumentError, "the field #{inspect(name)} is already set"
-    end
+    __ensure_field_is_unique__(mod, name, env.line)
 
-    has_default? = Keyword.has_key?(opts, :default)
-    enforce_by_default? = Module.get_attribute(mod, :ts_enforce?)
-
-    enforce? =
-      if is_nil(opts[:enforce]),
-        do: enforce_by_default? && !has_default?,
-        else: !!opts[:enforce]
-
-    nullable? = !has_default? && !enforce?
+    {has_default?, default_fn} = __resolve_default_field_options__(name, opts)
+    enforce? = __resolve_field_enforce__(mod, opts, has_default?)
+    __validate_strict_field!(mod, name, has_default?, enforce?)
+    __validate_and_store_field_doc!(mod, name, opts)
+    __maybe_store_dynamic_default__(mod, name, default_fn)
 
     Module.put_attribute(mod, :ts_fields, {name, opts[:default]})
+    Module.put_attribute(mod, :ts_field_lines, {name, env.line})
     Module.put_attribute(mod, :ts_plugin_fields, {name, type, opts, env})
-    Module.put_attribute(mod, :ts_types, {name, type_for(type, nullable?)})
+    Module.put_attribute(mod, :ts_types, {name, type_for(type, !has_default? && !enforce?)})
     if enforce?, do: Module.put_attribute(mod, :ts_enforce_keys, name)
   end
 
@@ -316,6 +449,435 @@ defmodule TypedStruct do
   # Makes the type nullable if the key is not enforced.
   defp type_for(type, false), do: type
   defp type_for(type, _), do: quote(do: unquote(type) | nil)
+
+  @doc false
+  def __append_field_docs__(_mod, mode) when mode in [false, :module_only], do: :ok
+
+  @doc false
+  def __append_field_docs__(mod, mode) do
+    field_docs =
+      mod
+      |> Module.get_attribute(:ts_field_docs)
+      |> Enum.reverse()
+
+    if field_docs != [] do
+      fields_section = render_fields_section(field_docs)
+
+      case {mode, Module.get_attribute(mod, :moduledoc)} do
+        {_, {_, false}} ->
+          :ok
+
+        {_, false} ->
+          :ok
+
+        {:fields_only, _} ->
+          Module.put_attribute(mod, :moduledoc, {0, fields_section})
+
+        {:full, nil} ->
+          Module.put_attribute(mod, :moduledoc, {0, fields_section})
+
+        {:full, {line, moduledoc}} when is_binary(moduledoc) ->
+          Module.put_attribute(mod, :moduledoc, {line, moduledoc <> "\n\n" <> fields_section})
+
+        {:full, {line, moduledoc}} when is_list(moduledoc) ->
+          Module.put_attribute(mod, :moduledoc, {line, Keyword.update(moduledoc, :en, fields_section, &(&1 <> "\n\n" <> fields_section))})
+
+        _ ->
+          :ok
+      end
+    end
+  end
+
+  @doc false
+  def __docs_mode__(opts) do
+    case Keyword.get(opts, :docs, :full) do
+      true -> :full
+      mode -> mode
+    end
+  end
+
+  @doc false
+  def __validate_typedstruct_opts__(opts) do
+    __validate_keyword_opts__(opts, @typedstruct_options, "typedstruct")
+
+    if Keyword.get(opts, :new) && Keyword.get(opts, :constructors) do
+      raise ArgumentError,
+            "typedstruct options :new and :constructors cannot be enabled together"
+    end
+
+    __validate_visibility_opt__(opts)
+    __validate_docs_opt__(opts)
+    __validate_boolean_opt__(opts, :enforce, "typedstruct")
+    __validate_boolean_opt__(opts, :new, "typedstruct")
+    __validate_boolean_opt__(opts, :strict, "typedstruct")
+    __validate_boolean_opt__(opts, :constructors, "typedstruct")
+    __validate_boolean_opt__(opts, :introspection, "typedstruct")
+
+    derive = Keyword.get(opts, :derive)
+
+    if !is_nil(derive) && !is_list(derive) do
+      raise ArgumentError, "typedstruct option :derive must be a list, got #{inspect(derive)}"
+    end
+  end
+
+  @doc false
+  def __validate_typedrecord_opts__(opts) do
+    __validate_keyword_opts__(opts, @typedrecord_options, "typedrecord")
+    __validate_visibility_opt__(opts)
+    __validate_docs_opt__(opts)
+    __validate_boolean_opt__(opts, :strict, "typedrecord")
+    __validate_boolean_opt__(opts, :constructors, "typedrecord")
+    __validate_boolean_opt__(opts, :introspection, "typedrecord")
+  end
+
+  defp __validate_keyword_opts__(opts, allowed, kind) when is_list(opts) do
+    unknown = Keyword.keys(opts) -- allowed
+
+    if unknown != [] do
+      raise ArgumentError,
+            "unknown options for #{kind}: #{inspect(unknown)}; allowed options are #{inspect(allowed)}"
+    end
+  end
+
+  defp __validate_keyword_opts__(opts, _allowed, kind) do
+    raise ArgumentError,
+          "#{kind} options must be a keyword list, got #{inspect(opts)}"
+  end
+
+  defp __validate_visibility_opt__(opts) do
+    visibility = Keyword.get(opts, :visibility)
+
+    if !is_nil(visibility) && visibility not in [:public, :opaque, :private] do
+      raise ArgumentError,
+            "invalid :visibility value #{inspect(visibility)}; expected one of :public, :opaque, :private"
+    end
+  end
+
+  defp __validate_docs_opt__(opts) do
+    docs = __docs_mode__(opts)
+
+    if docs not in [false, :module_only, :fields_only, :full] do
+      raise ArgumentError,
+            "invalid :docs value #{inspect(docs)}; expected false, :module_only, :fields_only, or :full"
+    end
+  end
+
+  defp __validate_boolean_opt__(opts, key, kind) do
+    value = Keyword.get(opts, key)
+
+    if !is_nil(value) && !is_boolean(value) do
+      raise ArgumentError,
+            "#{kind} option #{inspect(key)} must be a boolean, got #{inspect(value)}"
+    end
+  end
+
+  @doc false
+  def __build_struct__(module, attrs, field_names, required, static_defaults, dynamic_defaults) do
+    with {:ok, attrs_map} <- __normalize_attrs__(attrs),
+         :ok <- __validate_unknown_keys__(attrs_map, field_names),
+         :ok <- __validate_required_keys__(attrs_map, required) do
+      attrs_map =
+        attrs_map
+        |> __apply_dynamic_defaults__(dynamic_defaults)
+        |> __apply_defaults__(static_defaults)
+
+      {:ok, struct(module, attrs_map)}
+    end
+  end
+
+  @doc false
+  def __build_record__(attrs, tag, field_names, required, static_defaults, dynamic_defaults) do
+    with {:ok, attrs_map} <- __normalize_attrs__(attrs),
+         :ok <- __validate_unknown_keys__(attrs_map, field_names),
+         :ok <- __validate_required_keys__(attrs_map, required) do
+      attrs_map =
+        attrs_map
+        |> __apply_dynamic_defaults__(dynamic_defaults)
+        |> __apply_defaults__(static_defaults)
+
+      values = Enum.map(field_names, &Map.get(attrs_map, &1))
+      {:ok, List.to_tuple([tag | values])}
+    end
+  end
+
+  @doc false
+  def __normalize_attrs__(attrs) when is_map(attrs), do: {:ok, attrs}
+  def __normalize_attrs__(attrs) when is_list(attrs), do: {:ok, Enum.into(attrs, %{})}
+
+  def __normalize_attrs__(attrs) do
+    {:error, [{:attrs, "expected a map or keyword list, got #{inspect(attrs)}"}]}
+  end
+
+  @doc false
+  def __validate_unknown_keys__(attrs_map, field_names) do
+    unknown = Map.keys(attrs_map) -- field_names
+
+    if unknown == [] do
+      :ok
+    else
+      {:error, [{:unknown_fields, "unknown fields: #{inspect(unknown)}"}]}
+    end
+  end
+
+  @doc false
+  def __validate_required_keys__(attrs_map, required) do
+    missing = Enum.reject(required, &Map.has_key?(attrs_map, &1))
+
+    if missing == [] do
+      :ok
+    else
+      {:error, [{:missing_fields, "missing required fields: #{inspect(missing)}"}]}
+    end
+  end
+
+  @doc false
+  def __apply_defaults__(attrs_map, defaults) do
+    Enum.reduce(defaults, attrs_map, fn {field, default}, acc ->
+      if Map.has_key?(acc, field), do: acc, else: Map.put(acc, field, default)
+    end)
+  end
+
+  @doc false
+  def __apply_dynamic_defaults__(attrs_map, dynamic_defaults) do
+    Enum.reduce(dynamic_defaults, attrs_map, fn {field, default_fn}, acc ->
+      if Map.has_key?(acc, field) do
+        acc
+      else
+        Map.put(acc, field, default_fn.())
+      end
+    end)
+  end
+
+  @doc false
+  def __format_errors__(errors) do
+    Enum.map_join(errors, "; ", fn {_kind, message} -> message end)
+  end
+
+  defp __typedstruct_generated_blocks__(opts) do
+    []
+    |> __maybe_add_simple_new__(opts)
+    |> __maybe_add_struct_constructors__(opts)
+    |> __maybe_add_struct_introspection__(opts)
+  end
+
+  defp __typedstruct_derive_block__(opts) do
+    case opts[:derive] do
+      nil -> quote(do: nil)
+      derive -> quote(do: @derive unquote(Macro.escape(derive)))
+    end
+  end
+
+  defp __typedrecord_generated_blocks__(name, tag, opts) do
+    []
+    |> __maybe_add_record_constructors__(name, tag, opts)
+    |> __maybe_add_record_introspection__(name, opts)
+  end
+
+  defp __maybe_add_simple_new__(blocks, opts) do
+    if opts[:new] do
+      [
+        quote do
+          def new(attrs \\ %{}), do: struct(__MODULE__, attrs)
+        end
+        | blocks
+      ]
+    else
+      blocks
+    end
+  end
+
+  defp __maybe_add_struct_constructors__(blocks, opts) do
+    if opts[:constructors] do
+      constructor_block =
+        quote do
+          def from_map(attrs), do: new(attrs)
+          def from_keyword(attrs), do: new(attrs)
+
+          def new(attrs \\ %{}) do
+            TypedStruct.__build_struct__(
+              __MODULE__,
+              attrs,
+              Keyword.keys(Enum.reverse(@ts_fields)),
+              Enum.reverse(@ts_enforce_keys),
+              Map.new(Enum.reverse(@ts_fields)),
+              Enum.reverse(@ts_dynamic_defaults)
+            )
+          end
+
+          def new!(attrs \\ %{}) do
+            case new(attrs) do
+              {:ok, struct} -> struct
+              {:error, errors} -> raise ArgumentError, TypedStruct.__format_errors__(errors)
+            end
+          end
+        end
+
+      [constructor_block | blocks]
+    else
+      blocks
+    end
+  end
+
+  defp __maybe_add_struct_introspection__(blocks, opts) do
+    if opts[:introspection] do
+      introspection_block =
+        quote do
+          def __fields__, do: Keyword.keys(Enum.reverse(@ts_fields))
+          def __required__, do: Enum.reverse(@ts_enforce_keys)
+          def __defaults__, do: Map.new(Enum.reverse(@ts_fields))
+          def __dynamic_defaults__, do: Keyword.keys(Enum.reverse(@ts_dynamic_defaults))
+          def __types__, do: @ts_types
+        end
+
+      [introspection_block | blocks]
+    else
+      blocks
+    end
+  end
+
+  defp __maybe_add_record_constructors__(blocks, name, tag, opts) do
+    if opts[:constructors] do
+      new_fun = String.to_atom("#{name}_new")
+      new_bang_fun = String.to_atom("#{name}_new!")
+      from_map_fun = String.to_atom("#{name}_from_map")
+      from_keyword_fun = String.to_atom("#{name}_from_keyword")
+
+      constructor_block =
+        quote do
+          def unquote(from_map_fun)(attrs), do: unquote(new_fun)(attrs)
+          def unquote(from_keyword_fun)(attrs), do: unquote(new_fun)(attrs)
+
+          def unquote(new_fun)(attrs \\ %{}) do
+            TypedStruct.__build_record__(
+              attrs,
+              unquote(tag),
+              Keyword.keys(Enum.reverse(@ts_fields)),
+              Enum.reverse(@ts_enforce_keys),
+              Map.new(Enum.reverse(@ts_fields)),
+              Enum.reverse(@ts_dynamic_defaults)
+            )
+          end
+
+          def unquote(new_bang_fun)(attrs \\ %{}) do
+            case unquote(new_fun)(attrs) do
+              {:ok, record} -> record
+              {:error, errors} -> raise ArgumentError, TypedStruct.__format_errors__(errors)
+            end
+          end
+        end
+
+      [constructor_block | blocks]
+    else
+      blocks
+    end
+  end
+
+  defp __maybe_add_record_introspection__(blocks, name, opts) do
+    if opts[:introspection] do
+      fields_fun = String.to_atom("#{name}_fields")
+      required_fun = String.to_atom("#{name}_required")
+      defaults_fun = String.to_atom("#{name}_defaults")
+      dynamic_defaults_fun = String.to_atom("#{name}_dynamic_defaults")
+      types_fun = String.to_atom("#{name}_types")
+
+      introspection_block =
+        quote do
+          def unquote(fields_fun)(), do: Keyword.keys(Enum.reverse(@ts_fields))
+          def unquote(required_fun)(), do: Enum.reverse(@ts_enforce_keys)
+          def unquote(defaults_fun)(), do: Map.new(Enum.reverse(@ts_fields))
+          def unquote(dynamic_defaults_fun)(), do: Keyword.keys(Enum.reverse(@ts_dynamic_defaults))
+          def unquote(types_fun)(), do: @ts_types
+        end
+
+      [introspection_block | blocks]
+    else
+      blocks
+    end
+  end
+
+  defp __ensure_field_is_unique__(mod, name, line) do
+    if mod |> Module.get_attribute(:ts_fields) |> Keyword.has_key?(name) do
+      previous_line =
+        mod
+        |> Module.get_attribute(:ts_field_lines)
+        |> Keyword.get(name)
+
+      raise ArgumentError,
+            "the field #{inspect(name)} is already set at line #{previous_line}, cannot redefine it at line #{line}"
+    end
+  end
+
+  defp __resolve_default_field_options__(name, opts) do
+    has_default_fn? = Keyword.has_key?(opts, :default_fn)
+
+    if has_default_fn? && Keyword.has_key?(opts, :default) do
+      raise ArgumentError,
+            "field #{inspect(name)} cannot define both :default and :default_fn"
+    end
+
+    default_fn = opts[:default_fn]
+    __validate_default_fn__(name, has_default_fn?, default_fn)
+
+    {Keyword.has_key?(opts, :default) || has_default_fn?, default_fn}
+  end
+
+  defp __validate_default_fn__(_name, false, _default_fn), do: :ok
+
+  defp __validate_default_fn__(name, true, default_fn) do
+    if !is_function(default_fn, 0) do
+      raise ArgumentError,
+            "the :default_fn option for field #{inspect(name)} must be a remote 0-arity function capture, got #{inspect(default_fn)}"
+    end
+
+    if :erlang.fun_info(default_fn, :type) != {:type, :external} do
+      raise ArgumentError,
+            "the :default_fn option for field #{inspect(name)} must be a remote 0-arity function capture like &Mod.fun/0"
+    end
+  end
+
+  defp __resolve_field_enforce__(mod, opts, has_default?) do
+    enforce_by_default? = Module.get_attribute(mod, :ts_enforce?)
+
+    if is_nil(opts[:enforce]),
+      do: enforce_by_default? && !has_default?,
+      else: !!opts[:enforce]
+  end
+
+  defp __validate_strict_field!(mod, name, has_default?, enforce?) do
+    strict? = Module.get_attribute(mod, :ts_strict?)
+    nullable? = !has_default? && !enforce?
+
+    if strict? && nullable? do
+      raise ArgumentError,
+            "strict mode requires each field to define :default or :default_fn, or be enforced; field #{inspect(name)} is nullable"
+    end
+  end
+
+  defp __validate_and_store_field_doc!(mod, name, opts) do
+    case opts[:doc] do
+      nil -> :ok
+      doc when is_binary(doc) -> Module.put_attribute(mod, :ts_field_docs, {name, doc})
+
+      invalid ->
+        raise ArgumentError,
+              "the :doc option for field #{inspect(name)} must be a string, got #{inspect(invalid)}"
+    end
+  end
+
+  defp __maybe_store_dynamic_default__(_mod, _name, nil), do: :ok
+
+  defp __maybe_store_dynamic_default__(mod, name, default_fn) do
+    Module.put_attribute(mod, :ts_dynamic_defaults, {name, default_fn})
+  end
+
+  defp render_fields_section(field_docs) do
+    entries =
+      Enum.map(field_docs, fn {name, doc} ->
+        "* `#{name}` - #{doc}"
+      end)
+
+    Enum.join(["## Fields", "" | entries], "\n")
+  end
 
   @doc false
   defmacro __plugin_callbacks__(%Macro.Env{module: module}) do

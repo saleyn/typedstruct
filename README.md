@@ -4,6 +4,7 @@
 [![hex.pm version](https://img.shields.io/hexpm/v/typedstruct.svg?style=flat)](https://hex.pm/packages/typedstruct)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/typedstruct/)
 [![License](https://img.shields.io/hexpm/l/typedstruct.svg?style=flat)](https://github.com/saleyn/typedstruct/blob/main/LICENSE.md)
+[![Hex.pm](https://img.shields.io/hexpm/dt/typedstruct.svg)](https://hex.pm/packages/typedstruct)
 
 <!-- @moduledoc -->
 
@@ -154,7 +155,42 @@ end
 
 ### Options
 
-If you want to enforce all the keys by default, you can do:
+All options are listed together here for quick reference.
+
+Top-level options available on both `typedstruct` and `typedrecord`:
+
+* `module: ModuleName` - defines the generated struct/record in a submodule.
+* `visibility: :public | :private | :opaque` - controls generated type visibility.
+* `strict: true` - requires each field to be enforced or provide `default` / `default_fn`.
+* `constructors: true` - generates validated constructors.
+* `introspection: true` - generates helper functions for fields, defaults,
+  required fields, and types (see [Introspection helpers](#introspection-helpers)).
+* `docs: :full | :module_only | :fields_only | false` - controls how field docs
+  are merged into module documentation.
+
+Additional `typedstruct`-only options:
+
+* `enforce: true` - enforces all fields by default unless overridden per field.
+* `new: true` - generates a simple `new/1` constructor (`struct(__MODULE__, attrs)`).
+* `derive: [Protocol1, Protocol2]` - passes through `@derive` before `defstruct`.
+* `opaque: true` - deprecated alias for `visibility: :opaque`.
+
+Additional `typedrecord`-only options:
+
+* `tag: atom()` - sets record tag passed to `Record.defrecord/3`.
+* `opaque: true` - deprecated alias for `visibility: :opaque`.
+
+Field-level options (`field/3`):
+
+* `default: value` - static default value.
+* `default_fn: &Mod.fun/0` - dynamic default used by generated constructors.
+  (`default` and `default_fn` are mutually exclusive.)
+* `enforce: true | false` - field-level enforce override.
+* `doc: "..."` - field-level documentation included in generated docs.
+
+Examples
+
+Enforce all keys by default:
 
 ```elixir
 defmodule MyStruct do
@@ -173,8 +209,8 @@ defmodule MyStruct do
   end
 end
 ```
-You can also generate an opaque or private type for the struct by using
-the `visibility: :opaque | :private | :public` option:
+
+Generate opaque/private types with `visibility`:
 
 ```elixir
 defmodule MyOpaqueStruct do
@@ -187,6 +223,8 @@ defmodule MyOpaqueStruct do
 end
 ```
 
+Define generated code in a submodule:
+
 ```elixir
 defmodule MyPrivateStruct do
   use TypedStruct
@@ -198,9 +236,6 @@ defmodule MyPrivateStruct do
 end
 ```
 
-If you often define submodules containing only a struct, you can avoid
-boilerplate code:
-
 ```elixir
 defmodule MyModule do
   use TypedStruct
@@ -211,6 +246,75 @@ defmodule MyModule do
   end
 end
 ```
+
+#### Introspection helpers
+
+When `introspection: true` is enabled, TypedStruct generates reflection helpers
+at compile time.
+
+For `typedstruct`, the following functions are generated on the struct module:
+
+* `__fields__/0` - ordered list of field names.
+* `__required__/0` - ordered list of enforced field names.
+* `__defaults__/0` - map of static defaults from `default:`.
+* `__dynamic_defaults__/0` - ordered list of fields using `default_fn:`.
+* `__types__/0` - internal list used to build the generated typespec.
+
+Example:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  typedstruct introspection: true do
+    field :id, integer(), enforce: true
+    field :name, String.t(), default: "anonymous"
+    field :token, String.t(), default_fn: &UserDefaults.token/0
+  end
+end
+
+User.__fields__()
+# => [:id, :name, :token]
+
+User.__required__()
+# => [:id]
+
+User.__defaults__()
+# => %{id: nil, name: "anonymous", token: nil}
+
+User.__dynamic_defaults__()
+# => [:token]
+```
+
+For `typedrecord :person`, the same information is exposed with record-prefixed
+function names to avoid collisions when multiple records are defined in one
+module:
+
+* `person_fields/0`
+* `person_required/0`
+* `person_defaults/0`
+* `person_dynamic_defaults/0`
+* `person_types/0`
+
+Example:
+
+```elixir
+defmodule People do
+  use TypedStruct
+
+  typedrecord :person, introspection: true do
+    field :id, integer(), enforce: true
+    field :name, String.t(), default: "anonymous"
+  end
+end
+
+People.person_fields()
+# => [:id, :name]
+```
+
+These helpers are intended for tooling, schema inspection, and diagnostics.
+If you need runtime validation/construction as well, combine with
+`constructors: true`.
 
 ### Documentation
 
@@ -235,6 +339,41 @@ typedstruct module: MyStruct do
 
   field :a_string, String.t()
   field :an_int, integer()
+end
+```
+
+You can also document individual fields with the `doc` option. TypedStruct
+will append a generated `## Fields` section to the module documentation when
+running `mix docs` for both `typedstruct` and `typedrecord` blocks:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  @moduledoc "Represents an account user."
+
+  typedstruct do
+    field :name, String.t(), doc: "Display name shown in the UI."
+    field :email, String.t(), doc: "Primary email address."
+    field :active, boolean()
+  end
+end
+```
+
+Only fields with a `doc` value are included in the generated `## Fields`
+section.
+
+You can combine docs and constructors options, for example:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  typedstruct constructors: true, strict: true, introspection: true do
+    field :id, integer(), enforce: true, doc: "User id"
+    field :name, String.t(), default: "anonymous", doc: "Display name"
+    field :token, String.t(), default_fn: &UserDefaults.token/0
+  end
 end
 ```
 
@@ -277,9 +416,9 @@ Presently plugins are not supported by the `typedrecord` block.
   – Re-enables the legacy reflection functions from TypedStruct 0.1.x.
 * [`typed_struct_ctor`](https://hexdocs.pm/typed_struct_ctor/TypedStructCtor.html)
   – Adds validating (`new` and `from`) constructor functions.
-  > Try the macro out in real time without having to install or write any of your own code.  
+  > Try the macro out in real time without having to install or write any of your own code.
   > All you need is a running instance of [Livebook](https://livebook.dev/)
-  > 
+  >
   > [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https://github.com/withbelay/typed_struct_ctor/blob/main/try_it_out.livemd)
 
 This list is not meant to be exhaustive, please [search for “typedstruct” on

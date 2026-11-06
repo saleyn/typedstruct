@@ -1,7 +1,7 @@
 defmodule TypedStruct.MixProject do
   use Mix.Project
 
-  @version "0.5.4"
+  @version "0.5.5"
   @repo_url "https://github.com/saleyn/typedstruct"
 
   def project do
@@ -36,15 +36,14 @@ defmodule TypedStruct.MixProject do
       # Package
       package: package(),
       description:
-        "A library for defining structs with a type without writing " <>
-          "boilerplate code."
+        "A library for defining structs and records with automatic type inference."
     ]
   end
 
   defp deps do
     [
       # Development and test dependencies
-      {:ex_check, "~> 0.16.0", only: :dev, runtime: false},
+      {:ex_check, "~> 0.17", only: :dev, runtime: false},
       {:credo, "~> 1.0", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:excoveralls, ">= 0.0.0", only: :test, runtime: false},
@@ -53,7 +52,7 @@ defmodule TypedStruct.MixProject do
       # Project dependencies
 
       # Documentation dependencies
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
+      {:ex_doc, ">= 0.0.0", only: [:dev, :docs], runtime: false}
     ]
   end
 

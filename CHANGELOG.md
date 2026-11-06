@@ -6,7 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.5] - 2026-11-06
+
+### Added
+
+* Add `doc` option support to `field/3` in both `typedstruct` and `typedrecord`
+    so field-level documentation can be included in generated module docs under
+    a `Fields` section.
+* Add validated constructor generation with `constructors: true`.
+    * `typedstruct`: `new/1`, `new!/1`, `from_map/1`, `from_keyword/1`.
+    * `typedrecord`: `<record>_new/1`, `<record>_new!/1`,
+        `<record>_from_map/1`, `<record>_from_keyword/1`.
+* Add `default_fn: &Mod.fun/0` field option for dynamic defaults used by
+        generated constructors.
+* Add introspection helpers with `introspection: true`.
+* Add docs merge controls with `docs: :full | :module_only | :fields_only | false`.
+* Add strict mode with `strict: true` for both `typedstruct` and `typedrecord`.
+* Add `derive: [...]` support for `typedstruct`.
+
+### Changed
+
+* Add validation for unknown top-level options in `typedstruct` and `typedrecord`.
+* Improve duplicate field errors with source line information.
 
 ## [0.3.0] - 2022-02-15
 

@@ -38,6 +38,75 @@ defmodule TypedStructTest do
     end
   end
 
+  defmodule FieldDocsStruct do
+    @moduledoc "Struct used to verify generated field docs."
+    use TypedStruct
+
+    typedstruct do
+      field :name, String.t(), doc: "The display name."
+      field :age, non_neg_integer(), doc: "Age in full years."
+      field :active, boolean()
+    end
+
+    def docs, do: @moduledoc
+  end
+
+  defmodule HiddenFieldDocsStruct do
+    @moduledoc false
+    use TypedStruct
+
+    typedstruct do
+      field :secret, String.t(), doc: "Should not become module docs."
+    end
+
+    def docs, do: @moduledoc
+  end
+
+  defmodule ConstructorsStruct do
+    defmodule Defaults do
+      def token, do: "generated-token"
+    end
+
+    use TypedStruct
+
+    typedstruct constructors: true, introspection: true do
+      field :id, integer(), enforce: true
+      field :name, String.t(), default: "anonymous"
+      field :token, String.t(), default_fn: &Defaults.token/0
+    end
+  end
+
+  defmodule StrictStruct do
+    use TypedStruct
+
+    typedstruct strict: true do
+      field :id, integer(), enforce: true
+      field :enabled, boolean(), default: true
+    end
+  end
+
+  defmodule FieldsOnlyDocsStruct do
+    @moduledoc "This line should be replaced."
+    use TypedStruct
+
+    typedstruct docs: :fields_only do
+      field :value, integer(), doc: "Documented field"
+    end
+
+    def docs, do: @moduledoc
+  end
+
+  defmodule ModuleOnlyDocsStruct do
+    @moduledoc "This line should stay as-is."
+    use TypedStruct
+
+    typedstruct docs: :module_only do
+      field :value, integer(), doc: "Should not be appended"
+    end
+
+    def docs, do: @moduledoc
+  end
+
   ############################################################################
   ##                             Standard cases                             ##
   ############################################################################
@@ -123,6 +192,70 @@ defmodule TypedStructTest do
     assert %TestWithNew{field: 1} == TestWithNew.new(%{field: 1})
   end
 
+  test "generates validated constructors when `constructors: true` is set" do
+    assert {:ok, %ConstructorsStruct{id: 1, name: "anonymous", token: "generated-token"}} =
+             ConstructorsStruct.new(%{id: 1})
+
+    assert {:ok, %ConstructorsStruct{id: 2, name: "alice", token: "generated-token"}} =
+             ConstructorsStruct.from_keyword(id: 2, name: "alice")
+
+    assert %ConstructorsStruct{id: 3, token: "generated-token"} =
+             ConstructorsStruct.new!(%{id: 3})
+  end
+
+  test "constructor validation returns errors for missing or unknown fields" do
+    assert {:error, _} = ConstructorsStruct.new(%{})
+    assert {:error, _} = ConstructorsStruct.new(%{id: 1, extra: true})
+  end
+
+  test "constructor introspection helpers are generated when requested" do
+    assert ConstructorsStruct.__fields__() == [:id, :name, :token]
+    assert ConstructorsStruct.__required__() == [:id]
+    assert ConstructorsStruct.__defaults__()[:name] == "anonymous"
+    assert ConstructorsStruct.__dynamic_defaults__() == [:token]
+    assert is_list(ConstructorsStruct.__types__())
+  end
+
+  test "strict mode compiles for non-nullable fields" do
+    assert %StrictStruct{id: 1, enabled: true} = %StrictStruct{id: 1}
+  end
+
+  test "strict mode rejects nullable fields" do
+    assert_raise ArgumentError,
+                 ~r/strict mode requires each field to define :default or :default_fn, or be enforced/,
+                 fn ->
+                   defmodule InvalidStrictStruct do
+                     use TypedStruct
+
+                     typedstruct strict: true do
+                       field :nullable, integer()
+                     end
+                   end
+                 end
+  end
+
+  test "docs mode can replace moduledoc with fields only" do
+    assert FieldsOnlyDocsStruct.docs() =~ "## Fields"
+    assert FieldsOnlyDocsStruct.docs() =~ "`value` - Documented field"
+    refute FieldsOnlyDocsStruct.docs() =~ "This line should be replaced."
+  end
+
+  test "docs mode can preserve module docs without field section" do
+    assert ModuleOnlyDocsStruct.docs() == "This line should stay as-is."
+  end
+
+  test "adds field docs to moduledoc when `doc` option is provided" do
+    assert FieldDocsStruct.docs() =~ "Struct used to verify generated field docs."
+    assert FieldDocsStruct.docs() =~ "## Fields"
+    assert FieldDocsStruct.docs() =~ "`name` - The display name."
+    assert FieldDocsStruct.docs() =~ "`age` - Age in full years."
+    refute FieldDocsStruct.docs() =~ "`active`"
+  end
+
+  test "does not override @moduledoc false when field docs are provided" do
+    assert HiddenFieldDocsStruct.docs() == false
+  end
+
   ############################################################################
   ##                                Problems                                ##
   ############################################################################
@@ -162,7 +295,7 @@ defmodule TypedStructTest do
   end
 
   test "it is not possible to add twice a field with the same name" do
-    assert_raise ArgumentError, "the field :name is already set", fn ->
+    assert_raise ArgumentError, ~r/the field :name is already set at line/, fn ->
       defmodule InvalidStruct do
         use TypedStruct
 
@@ -174,10 +307,51 @@ defmodule TypedStructTest do
     end
   end
 
+  test "the :doc option must be a string when provided" do
+    assert_raise ArgumentError,
+                 "the :doc option for field :name must be a string, got 123",
+                 fn ->
+                   defmodule InvalidDocStruct do
+                     use TypedStruct
+
+                     typedstruct do
+                       field :name, String.t(), doc: 123
+                     end
+                   end
+                 end
+  end
+
+  test "unknown typedstruct options are rejected" do
+    assert_raise ArgumentError, ~r/unknown options for typedstruct/, fn ->
+      defmodule InvalidTypedStructOptions do
+        use TypedStruct
+
+        typedstruct unknown_option: true do
+          field :value, integer()
+        end
+      end
+    end
+  end
+
+  test "typedstruct docs option is validated" do
+    assert_raise ArgumentError,
+                 ~r/invalid :docs value/,
+                 fn ->
+                   defmodule InvalidTypedStructDocs do
+                     use TypedStruct
+
+                     typedstruct docs: :invalid do
+                       field :value, integer()
+                     end
+                   end
+                 end
+  end
+
   test "aliases are properly resolved in types" do
     type1 = standardize_first_type(TypedStructs.Alias.Without)
     type2 = standardize_first_type(TypedStructs.Alias.With)
 
     assert type1 == type2
   end
+
 end

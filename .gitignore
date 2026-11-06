@@ -28,6 +28,7 @@
 
 /.elixir_ls/
 /.history/
+/.vscode/
 
 ##
 ## Crash dumps

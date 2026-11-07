@@ -26,7 +26,7 @@ defmodule TypedStruct.MixProject do
           "ecto.md": [title: "Ecto Integration"],
           "CHANGELOG.md": [title: "Changelog"],
           "CONTRIBUTING.md": [title: "Contributing"],
-          "LICENSE.md": [title: "License"]
+          "LICENSE.md": [title: "License"],
         ],
         main: "readme",
         source_url: @repo_url,
@@ -98,7 +98,10 @@ defmodule TypedStruct.MixProject do
 
   defp package do
     [
+      files:    ~w(lib assets .formatter.exs mix.* *.md),
       licenses: ["MIT"],
+      maintainers: ["Serge Aleynikov"],
+      keywords:    ["elixir", "macro", "type", "schema", "typedstruct", "typedrecord", "typedschema"],
       links: %{
         "Changelog" => "https://hexdocs.pm/typedstruct/changelog.html",
         "GitHub" => @repo_url

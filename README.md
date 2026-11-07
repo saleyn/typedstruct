@@ -1,4 +1,4 @@
-# TypedStruct
+![TypedStruct](assets/typedstruct-banner.png?raw=true)
 
 [![Build Status](https://github.com/saleyn/typedstruct/actions/workflows/ci.yml/badge.svg)](https://github.com/saleyn/typedstruct/actions/workflows/ci.yml)
 [![hex.pm version](https://img.shields.io/hexpm/v/typedstruct.svg?style=flat)](https://hex.pm/packages/typedstruct)

@@ -84,9 +84,7 @@ defmodule Person do
 end
 ```
 
-Thanks to TypedStruct, this is now possible :)
-
-## Usage
+## How do I use `TypedStruct`?
 
 ### Setup
 
@@ -674,22 +672,422 @@ defmodule Person do
 end
 ```
 
+## Usage
+
+### General usage
+
+To define a typed struct, use
+[`TypedStruct`](https://hexdocs.pm/typedstruct/TypedStruct.html), then define
+your struct within a `typedstruct` block:
+
+```elixir
+defmodule MyStruct do
+  # Use TypedStruct to import the typedstruct macro.
+  use TypedStruct
+
+  # Define your struct.
+  typedstruct do
+    # Define each field with the field macro.
+    field :a_string, String.t()
+
+    # You can set a default value.
+    field :string_with_default, String.t(), default: "default"
+
+    # You can enforce a field.
+    field :enforced_field, integer(), enforce: true
+  end
+end
+```
+
+Each field is defined through the
+[`field/2`](https://hexdocs.pm/typedstruct/TypedStruct.html#field/2) macro.
+
+To define a record use the `typedrecord` block:
+
+```elixir
+defmodule Person do
+  use TypedStruct
+
+  typedrecord :person do
+    @typedoc "A person"
+
+    field :name, String.t(),
+    field :age,  non_neg_integer(), default: 0
+  end
+end
+```
+
+## Options
+
+All options are listed together here for quick reference.
+
+Top-level options available on both `typedstruct` and `typedrecord`:
+
+* `module: ModuleName` - defines the generated struct/record in a submodule.
+* `visibility: :public | :private | :opaque` - controls generated type visibility.
+* `strict: true` - requires each field to be enforced or provide `default` / `default_fn`.
+* `constructors: true` - generates validated constructors.
+* `introspection: true` - generates helper functions for fields, defaults,
+  required fields, and types (see [Introspection helpers](#introspection-helpers)).
+* `docs: :full | :module_only | :fields_only | false` - controls how field docs
+  are merged into module documentation.
+
+Additional `typedstruct`-only options:
+
+* `enforce: true` - enforces all fields by default unless overridden per field.
+* `new: true` - generates a simple `new/1` constructor (`struct(__MODULE__, attrs)`).
+* `derive: [Protocol1, Protocol2]` - passes through `@derive` before `defstruct`.
+* `opaque: true` - deprecated alias for `visibility: :opaque`.
+
+Additional `typedrecord`-only options:
+
+* `tag: atom()` - sets record tag passed to `Record.defrecord/3`.
+* `opaque: true` - deprecated alias for `visibility: :opaque`.
+
+Field-level options (`field/3`):
+
+* `default: value` - static default value.
+* `default_fn: &Mod.fun/0` - dynamic default used by generated constructors.
+  (`default` and `default_fn` are mutually exclusive.)
+* `enforce: true | false` - field-level enforce override.
+* `doc: "..."` - field-level documentation included in generated docs.
+
+Examples
+
+Enforce all keys by default:
+
+```elixir
+defmodule MyStruct do
+  use TypedStruct
+
+  # Enforce keys by default.
+  typedstruct enforce: true do
+    # This key is enforced.
+    field :enforced_by_default, term()
+
+    # You can override the default behaviour.
+    field :not_enforced, term(), enforce: false
+
+    # A key with a default value is not enforced.
+    field :not_enforced_either, integer(), default: 1
+  end
+end
+```
+
+Generate opaque/private types with `visibility`:
+
+```elixir
+defmodule MyOpaqueStruct do
+  use TypedStruct
+
+  # Generate an opaque type for the struct.
+  typedstruct visibility: :opaque do
+    field :name, String.t()
+  end
+end
+```
+
+Define generated code in a submodule:
+
+```elixir
+defmodule MyPrivateStruct do
+  use TypedStruct
+
+  # Generate a private type for the struct.
+  typedstruct visibility: :private do
+    field :name, String.t()
+  end
+end
+```
+
+```elixir
+defmodule MyModule do
+  use TypedStruct
+
+  # You now have %MyModule.Struct{}.
+  typedstruct module: Struct do
+    field :field, term()
+  end
+end
+```
+
+### Introspection helpers
+
+When `introspection: true` is enabled, TypedStruct generates reflection helpers
+at compile time.
+
+For `typedstruct`, the following functions are generated on the struct module:
+
+* `__fields__/0` - ordered list of field names.
+* `__required__/0` - ordered list of enforced field names.
+* `__defaults__/0` - map of static defaults from `default:`.
+* `__dynamic_defaults__/0` - ordered list of fields using `default_fn:`.
+* `__types__/0` - internal list used to build the generated typespec.
+
+Example:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  typedstruct introspection: true do
+    field :id, integer(), enforce: true
+    field :name, String.t(), default: "anonymous"
+    field :token, String.t(), default_fn: &UserDefaults.token/0
+  end
+end
+
+User.__fields__()
+# => [:id, :name, :token]
+
+User.__required__()
+# => [:id]
+
+User.__defaults__()
+# => %{id: nil, name: "anonymous", token: nil}
+
+User.__dynamic_defaults__()
+# => [:token]
+```
+
+For `typedrecord :person`, the same information is exposed with record-prefixed
+function names to avoid collisions when multiple records are defined in one
+module:
+
+* `person_fields/0`
+* `person_required/0`
+* `person_defaults/0`
+* `person_dynamic_defaults/0`
+* `person_types/0`
+
+Example:
+
+```elixir
+defmodule People do
+  use TypedStruct
+
+  typedrecord :person, introspection: true do
+    field :id, integer(), enforce: true
+    field :name, String.t(), default: "anonymous"
+  end
+end
+
+People.person_fields()
+# => [:id, :name]
+```
+
+These helpers are intended for tooling, schema inspection, and diagnostics.
+If you need runtime validation/construction as well, combine with
+`constructors: true`.
+
+### Documentation
+
+TypedStruct supports comprehensive documentation through multiple attributes:
+
+#### Type Documentation with @typedoc
+
+Add a `@typedoc` attribute in the `typedstruct` block to document the type:
+
+```elixir
+typedstruct do
+  @typedoc "A typed struct"
+
+  field :a_string, String.t()
+  field :an_int, integer()
+end
+```
+
+#### Module Documentation
+
+You can also document the entire module and submodules:
+
+```elixir
+typedstruct module: MyStruct do
+  @moduledoc "A submodule with a typed struct."
+  @typedoc "A typed struct in a submodule"
+
+  field :a_string, String.t()
+  field :an_int, integer()
+end
+```
+
+#### Field Documentation
+
+Document individual fields in two ways:
+
+**1. Using the `doc:` option:**
+
+```elixir
+typedstruct do
+  field :a_string, String.t(), doc: "A string field"
+  field :an_int, integer(), doc: "An integer field"
+end
+```
+
+**2. Using the `@doc` attribute (applies to the next field):**
+
+```elixir
+typedstruct do
+  @doc "A string field"
+  field :a_string, String.t()
+
+  @doc "An integer field"
+  field :an_int, integer()
+end
+```
+
+The `@doc` attribute is automatically cleared after each field, ensuring it only documents the intended field. This approach is useful when you want to keep documentation close to the field definition.
+
+`TypedStruct` will append a generated `## Fields` section to the module documentation when running `mix docs` for both `typedstruct` and `typedrecord` blocks:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  @moduledoc "Represents an account user."
+
+  typedstruct do
+    field :name, String.t(), doc: "Display name shown in the UI."
+    field :email, String.t(), doc: "Primary email address."
+    field :active, boolean()
+  end
+end
+```
+
+Only fields with a `doc` value are included in the generated `## Fields`
+section.
+
+You can combine docs and constructors options, for example:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  typedstruct constructors: true, strict: true, introspection: true do
+    field :id, integer(), enforce: true, doc: "User id"
+    field :name, String.t(), default: "anonymous", doc: "Display name"
+    field :token, String.t(), default_fn: &UserDefaults.token/0
+  end
+end
+```
+
+## Plugins
+
+It is possible to extend the scope of TypedStruct by using its plugin interface,
+as described in
+[`TypedStruct.Plugin`](https://hexdocs.pm/typedstruct/TypedStruct.Plugin.html).
+For instance, to automatically generate lenses with the
+[Lens](https://github.com/obrok/lens) library, you can use
+[`TypedStructLens`](https://github.com/saleyn/typedstruct_lens) and do:
+
+```elixir
+defmodule MyStruct do
+  use TypedStruct
+
+  typedstruct do
+    plugin TypedStructLens
+
+    field :a_field, String.t()
+    field :other_field, atom()
+  end
+
+  @spec change(t()) :: t()
+  def change(data) do
+    # a_field/0 is generated by TypedStructLens.
+    lens = a_field()
+    put_in(data, [lens], "Changed")
+  end
+end
+```
+
+Presently plugins are not supported by the `typedrecord` block.
+
+### Default Plugins
+
+You can specify default plugins when using TypedStruct, which will be automatically
+injected into all `typedstruct` and `typedrecord` definitions. This is useful for
+creating wrapper modules that provide preset plugins:
+
+```elixir
+defmodule MyApp.Type do
+  defmacro __using__(_) do
+    quote do
+      use TypedStruct, plugins: [MyApp.TypedStruct.Plugin.EctoTypes]
+    end
+  end
+end
+
+defmodule MyApp.User do
+  use MyApp.Type
+
+  typedstruct do
+    field :id, integer(), enforce: true
+    field :name, String.t(), ecto_type: :string
+  end
+end
+```
+
+Now `MyApp.User` automatically has the `EctoTypes` plugin injected without needing
+to manually call `plugin MyApp.TypedStruct.Plugin.EctoTypes` in the `typedstruct` block.
+
+### Third-party Plugins
+
+* [`typedstruct_lens`](https://github.com/saleyn/typedstruct_lens) –
+    Integration with the [Lens](https://github.com/obrok/lens) library.
+* [`typedstruct_legacy_reflection`](https://github.com/saleyn/typedstruct_legacy_reflection)
+  – Re-enables the legacy reflection functions from TypedStruct 0.1.x.
+* [`typed_struct_ctor`](https://hexdocs.pm/typed_struct_ctor/TypedStructCtor.html)
+  – Adds validating (`new` and `from`) constructor functions.
+  > Try the macro out in real time without having to install or write any of your own code.
+  > All you need is a running instance of [Livebook](https://livebook.dev/)
+  >
+  > [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https://github.com/withbelay/typed_struct_ctor/blob/main/try_it_out.livemd)
+* [`typed_ecto_schema`](https://hex.pm/packages/typed_ecto_schema) –
+    Specialized library for Ecto schemas with automatic typespec generation for associations,
+    timestamps, and other Ecto-specific features.
+
+This list is not meant to be exhaustive, please [search for “typedstruct” on
+hex.pm](https://hex.pm/packages?search=typedstruct) for other results. If you
+want your plugin to appear here, please open an issue.
+
+## Ecto Integration
+
+TypedStruct provides optional integration with Ecto through the `TypedStruct.Ecto` module, enabling you to define Ecto schemas with automatic type inference:
+
+```elixir
+defmodule User do
+  use TypedStruct.Ecto
+
+  typedschema "users" do
+    field      :id,      :id
+    field      :email,   :string, enforce: true
+    field      :name,    :string
+    field      :age,     :integer
+    belongs_to :company, Company
+    has_many   :posts,   Post
+    timestamps()
+  end
+end
+```
+
+The `typedschema` macro automatically infers Elixir types from Ecto field types, generates proper types for associations, supports polymorphic embeds, and enables type overrides with `::` syntax.
+
+**For comprehensive guide with examples, see [TypedStruct.Ecto Guide](ecto.md):**
+- Field types and associations
+- Embedded and polymorphic schemas
+- Type overrides and custom types
+- Real-world examples (e-commerce, CMS, notifications)
+- Validation patterns
+- Comparison with [typed_ecto_schema](https://hex.pm/packages/typed_ecto_schema)
+
+### Built-in Integrations
+
+* `TypedStruct.Ecto` – Optional module providing `typedschema/2` macro for seamless
+  Ecto schema integration. Requires Ecto to be installed.
+* `TypedStruct.Plugin.EctoSchema` – Reference plugin showing how to build plugins for
+  external libraries.
+
 <!-- @moduledoc -->
-
-## Initial roadmap
-
-* [x] Struct definition
-* [x] Type definition (with nullable types)
-* [x] Default values
-* [x] Enforced keys (non-nullable types)
-* [x] Plugin API
-* [x] Default value type-checking (is it possible?)
-* [x] Integration with [Lens](https://github.com/obrok/lens)
-* [x] Integration with [Ecto](https://github.com/elixir-ecto/ecto)
-
-## Plugin ideas
-
-* [ ] Guard generation
 
 ## Related libraries
 

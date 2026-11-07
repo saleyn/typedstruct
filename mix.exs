@@ -23,6 +23,7 @@ defmodule TypedStruct.MixProject do
       docs: [
         extras: [
           "README.md": [title: "Overview"],
+          "ecto.md": [title: "Ecto Integration"],
           "CHANGELOG.md": [title: "Changelog"],
           "CONTRIBUTING.md": [title: "Contributing"],
           "LICENSE.md": [title: "License"]

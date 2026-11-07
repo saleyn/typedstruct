@@ -1,7 +1,7 @@
 defmodule TypedStruct.MixProject do
   use Mix.Project
 
-  @version "0.6.0"
+  @version "0.6.1"
   @repo_url "https://github.com/saleyn/typedstruct"
 
   def project do
@@ -28,6 +28,7 @@ defmodule TypedStruct.MixProject do
           "CONTRIBUTING.md": [title: "Contributing"],
           "LICENSE.md": [title: "License"],
         ],
+        assets: %{"assets" => "assets"},
         main: "readme",
         source_url: @repo_url,
         source_ref: "v#{@version}",

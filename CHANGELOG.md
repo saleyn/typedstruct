@@ -19,7 +19,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
         `<record>_from_map/1`, `<record>_from_keyword/1`.
 * Add `default_fn: &Mod.fun/0` field option for dynamic defaults used by
         generated constructors.
-* Add introspection helpers with `introspection: true`.
+* Add reflection helpers with `reflection: true`.
 * Add docs merge controls with `docs: :full | :module_only | :fields_only | false`.
 * Add strict mode with `strict: true` for both `typedstruct` and `typedrecord`.
 * Add `derive: [...]` support for `typedstruct`.

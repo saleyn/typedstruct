@@ -34,7 +34,7 @@ defmodule TypedRecordTest do
 
     use TypedStruct
 
-    typedrecord :user, constructors: true, introspection: true do
+    typedrecord :user, constructors: true, reflection: true do
       field :id, integer(), enforce: true
       field :name, String.t(), default: "anonymous"
       field :token, String.t(), default_fn: &Defaults.token/0
@@ -140,7 +140,7 @@ defmodule TypedRecordTest do
              RecordConstructors.user_new!(%{id: 3})
   end
 
-  test "record constructor introspection helpers are generated" do
+  test "record constructor reflection helpers are generated" do
     assert RecordConstructors.user_fields() == [:id, :name, :token]
     assert RecordConstructors.user_required() == [:id]
     assert RecordConstructors.user_defaults()[:name] == "anonymous"

@@ -161,8 +161,8 @@ Top-level options available on both `typedstruct` and `typedrecord`:
 * `visibility: :public | :private | :opaque` - controls generated type visibility.
 * `strict: true` - requires each field to be enforced or provide `default` / `default_fn`.
 * `constructors: true` - generates validated constructors.
-* `introspection: true` - generates helper functions for fields, defaults,
-  required fields, and types (see [Introspection helpers](#introspection-helpers)).
+* `reflection: true` - generates helper functions for fields, defaults,
+  required fields, and types (see [Introspection helpers](#reflection-helpers)).
 * `docs: :full | :module_only | :fields_only | false` - controls how field docs
   are merged into module documentation.
 
@@ -247,7 +247,7 @@ end
 
 #### Introspection helpers
 
-When `introspection: true` is enabled, TypedStruct generates reflection helpers
+When `reflection: true` is enabled, TypedStruct generates reflection helpers
 at compile time.
 
 For `typedstruct`, the following functions are generated on the struct module:
@@ -264,7 +264,7 @@ Example:
 defmodule User do
   use TypedStruct
 
-  typedstruct introspection: true do
+  typedstruct reflection: true do
     field :id, integer(), enforce: true
     field :name, String.t(), default: "anonymous"
     field :token, String.t(), default_fn: &UserDefaults.token/0
@@ -300,7 +300,7 @@ Example:
 defmodule People do
   use TypedStruct
 
-  typedrecord :person, introspection: true do
+  typedrecord :person, reflection: true do
     field :id, integer(), enforce: true
     field :name, String.t(), default: "anonymous"
   end
@@ -397,7 +397,7 @@ You can combine docs and constructors options, for example:
 defmodule User do
   use TypedStruct
 
-  typedstruct constructors: true, strict: true, introspection: true do
+  typedstruct constructors: true, strict: true, reflection: true do
     field :id, integer(), enforce: true, doc: "User id"
     field :name, String.t(), default: "anonymous", doc: "Display name"
     field :token, String.t(), default_fn: &UserDefaults.token/0
@@ -727,8 +727,8 @@ Top-level options available on both `typedstruct` and `typedrecord`:
 * `visibility: :public | :private | :opaque` - controls generated type visibility.
 * `strict: true` - requires each field to be enforced or provide `default` / `default_fn`.
 * `constructors: true` - generates validated constructors.
-* `introspection: true` - generates helper functions for fields, defaults,
-  required fields, and types (see [Introspection helpers](#introspection-helpers)).
+* `reflection: true` - generates helper functions for fields, defaults,
+  required fields, and types (see [Introspection helpers](#reflection-helpers)).
 * `docs: :full | :module_only | :fields_only | false` - controls how field docs
   are merged into module documentation.
 
@@ -813,7 +813,7 @@ end
 
 ### Introspection helpers
 
-When `introspection: true` is enabled, TypedStruct generates reflection helpers
+When `reflection: true` is enabled, TypedStruct generates reflection helpers
 at compile time.
 
 For `typedstruct`, the following functions are generated on the struct module:
@@ -830,7 +830,7 @@ Example:
 defmodule User do
   use TypedStruct
 
-  typedstruct introspection: true do
+  typedstruct reflection: true do
     field :id, integer(), enforce: true
     field :name, String.t(), default: "anonymous"
     field :token, String.t(), default_fn: &UserDefaults.token/0
@@ -866,7 +866,7 @@ Example:
 defmodule People do
   use TypedStruct
 
-  typedrecord :person, introspection: true do
+  typedrecord :person, reflection: true do
     field :id, integer(), enforce: true
     field :name, String.t(), default: "anonymous"
   end
@@ -963,7 +963,7 @@ You can combine docs and constructors options, for example:
 defmodule User do
   use TypedStruct
 
-  typedstruct constructors: true, strict: true, introspection: true do
+  typedstruct constructors: true, strict: true, reflection: true do
     field :id, integer(), enforce: true, doc: "User id"
     field :name, String.t(), default: "anonymous", doc: "Display name"
     field :token, String.t(), default_fn: &UserDefaults.token/0

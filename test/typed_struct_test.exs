@@ -86,7 +86,7 @@ defmodule TypedStructTest do
 
     use TypedStruct
 
-    typedstruct constructors: true, introspection: true do
+    typedstruct constructors: true, reflection: true do
       field :id, integer(), enforce: true
       field :name, String.t(), default: "anonymous"
       field :token, String.t(), default_fn: &Defaults.token/0
@@ -268,7 +268,7 @@ defmodule TypedStructTest do
     assert {:error, _} = ConstructorsStruct.new(%{id: 1, extra: true})
   end
 
-  test "constructor introspection helpers are generated when requested" do
+  test "constructor reflection helpers are generated when requested" do
     assert ConstructorsStruct.__fields__() == [:id, :name, :token]
     assert ConstructorsStruct.__required__() == [:id]
     assert ConstructorsStruct.__defaults__()[:name] == "anonymous"

@@ -26,7 +26,7 @@ defmodule TypedStruct do
     :derive,
     :docs,
     :enforce,
-    :introspection,
+    :reflection,
     :module,
     :new,
     :opaque,
@@ -37,7 +37,7 @@ defmodule TypedStruct do
   @typedrecord_options [
     :constructors,
     :docs,
-    :introspection,
+    :reflection,
     :module,
     :opaque,
     :strict,
@@ -73,7 +73,7 @@ defmodule TypedStruct do
     * `new` - if set to `true`, it will generate `__MODULE__.new(attrs \\ %{})`.
     * `constructors` - if set to `true`, generates validated constructor helpers:
       `new/1`, `new!/1`, `from_map/1`, `from_keyword/1`.
-    * `introspection` - if set to `true`, generates reflection helper functions:
+    * `reflection` - if set to `true`, generates reflection helper functions:
       `__fields__/0`, `__required__/0`, `__defaults__/0`,
       `__dynamic_defaults__/0`, `__types__/0`.
     * `strict` - if set to `true`, each field must be enforced or define a default.
@@ -152,12 +152,12 @@ defmodule TypedStruct do
       # User.from_map/1
       # User.from_keyword/1
 
-  You can generate introspection helpers:
+  You can generate reflection helpers:
 
       defmodule Account do
         use TypedStruct
 
-        typedstruct introspection: true do
+        typedstruct reflection: true do
           field :id, integer(), enforce: true
           field :enabled, boolean(), default: true
         end
@@ -213,7 +213,7 @@ defmodule TypedStruct do
     * `constructors` - if set to `true`, generates validated constructor helpers:
       `<name>_new/1`, `<name>_new!/1`, `<name>_from_map/1`,
       `<name>_from_keyword/1`.
-    * `introspection` - if set to `true`, generates reflection helper functions:
+    * `reflection` - if set to `true`, generates reflection helper functions:
       `<name>_fields/0`, `<name>_required/0`, `<name>_defaults/0`,
       `<name>_dynamic_defaults/0`, `<name>_types/0`.
     * `strict` - if set to `true`, each field must be enforced or define a default.
@@ -228,7 +228,7 @@ defmodule TypedStruct do
       defmodule People do
         use TypedStruct
 
-        typedrecord :person, constructors: true, introspection: true do
+        typedrecord :person, constructors: true, reflection: true do
           field :id, integer(), enforce: true
           field :name, String.t(), default: "anonymous"
         end
@@ -240,7 +240,7 @@ defmodule TypedStruct do
       # People.person_from_map/1
       # People.person_from_keyword/1
 
-      # Generated introspection:
+      # Generated reflection:
       # People.person_fields/0
       # People.person_required/0
       # People.person_defaults/0
@@ -588,7 +588,7 @@ defmodule TypedStruct do
     __validate_boolean_opt__(opts, :new, "typedstruct")
     __validate_boolean_opt__(opts, :strict, "typedstruct")
     __validate_boolean_opt__(opts, :constructors, "typedstruct")
-    __validate_boolean_opt__(opts, :introspection, "typedstruct")
+    __validate_boolean_opt__(opts, :reflection, "typedstruct")
 
     derive = Keyword.get(opts, :derive)
 
@@ -604,7 +604,7 @@ defmodule TypedStruct do
     __validate_docs_opt__(opts)
     __validate_boolean_opt__(opts, :strict, "typedrecord")
     __validate_boolean_opt__(opts, :constructors, "typedrecord")
-    __validate_boolean_opt__(opts, :introspection, "typedrecord")
+    __validate_boolean_opt__(opts, :reflection, "typedrecord")
   end
 
   defp __validate_keyword_opts__(opts, allowed, kind) when is_list(opts) do
@@ -734,7 +734,7 @@ defmodule TypedStruct do
     []
     |> __maybe_add_simple_new__(opts)
     |> __maybe_add_struct_constructors__(opts)
-    |> __maybe_add_struct_introspection__(opts)
+    |> __maybe_add_struct_reflection__(opts)
   end
 
   defp __typedstruct_derive_block__(opts) do
@@ -747,7 +747,7 @@ defmodule TypedStruct do
   defp __typedrecord_generated_blocks__(name, tag, opts) do
     []
     |> __maybe_add_record_constructors__(name, tag, opts)
-    |> __maybe_add_record_introspection__(name, opts)
+    |> __maybe_add_record_reflection__(name, opts)
   end
 
   defp __maybe_add_simple_new__(blocks, opts) do
@@ -795,9 +795,9 @@ defmodule TypedStruct do
     end
   end
 
-  defp __maybe_add_struct_introspection__(blocks, opts) do
-    if opts[:introspection] do
-      introspection_block =
+  defp __maybe_add_struct_reflection__(blocks, opts) do
+    if opts[:reflection] do
+      reflection_block =
         quote do
           def __fields__, do: Keyword.keys(Enum.reverse(@ts_fields))
           def __required__, do: Enum.reverse(@ts_enforce_keys)
@@ -806,7 +806,7 @@ defmodule TypedStruct do
           def __types__, do: @ts_types
         end
 
-      [introspection_block | blocks]
+      [reflection_block | blocks]
     else
       blocks
     end
@@ -849,15 +849,15 @@ defmodule TypedStruct do
     end
   end
 
-  defp __maybe_add_record_introspection__(blocks, name, opts) do
-    if opts[:introspection] do
+  defp __maybe_add_record_reflection__(blocks, name, opts) do
+    if opts[:reflection] do
       fields_fun = String.to_atom("#{name}_fields")
       required_fun = String.to_atom("#{name}_required")
       defaults_fun = String.to_atom("#{name}_defaults")
       dynamic_defaults_fun = String.to_atom("#{name}_dynamic_defaults")
       types_fun = String.to_atom("#{name}_types")
 
-      introspection_block =
+      reflection_block =
         quote do
           def unquote(fields_fun)(), do: Keyword.keys(Enum.reverse(@ts_fields))
           def unquote(required_fun)(), do: Enum.reverse(@ts_enforce_keys)
@@ -866,7 +866,7 @@ defmodule TypedStruct do
           def unquote(types_fun)(), do: @ts_types
         end
 
-      [introspection_block | blocks]
+      [reflection_block | blocks]
     else
       blocks
     end

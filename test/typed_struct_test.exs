@@ -51,6 +51,23 @@ defmodule TypedStructTest do
     def docs, do: @moduledoc
   end
 
+  defmodule AttrDocStruct do
+    @moduledoc "Struct used to verify @doc attribute field documentation."
+    use TypedStruct
+
+    typedstruct do
+      @doc "The display name."
+      field :name, String.t()
+
+      @doc "Age in full years."
+      field :age, non_neg_integer()
+
+      field :active, boolean()
+    end
+
+    def docs, do: @moduledoc
+  end
+
   defmodule HiddenFieldDocsStruct do
     @moduledoc false
     use TypedStruct
@@ -293,6 +310,14 @@ defmodule TypedStructTest do
     assert FieldDocsStruct.docs() =~ "`name` - The display name."
     assert FieldDocsStruct.docs() =~ "`age` - Age in full years."
     refute FieldDocsStruct.docs() =~ "`active`"
+  end
+
+  test "infers field docs from @doc attribute when doc option is missing" do
+    assert AttrDocStruct.docs() =~ "Struct used to verify @doc attribute field documentation."
+    assert AttrDocStruct.docs() =~ "## Fields"
+    assert AttrDocStruct.docs() =~ "`name` - The display name."
+    assert AttrDocStruct.docs() =~ "`age` - Age in full years."
+    refute AttrDocStruct.docs() =~ "`active`"
   end
 
   test "does not override @moduledoc false when field docs are provided" do

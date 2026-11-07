@@ -9,7 +9,7 @@ last_supported_version? =
   skipped: false,
   tools: [
     {:compiler, "mix compile --force --verbose --warnings-as-errors"},
-    {:ex_unit, "mix test --trace"},
+    {:ex_unit, "mix test --trace --include integration"},
 
     # Run the formatter and ex_doc only for the last supported version. This
     # avoids errors in CI when the formatting changes or ex_doc is not

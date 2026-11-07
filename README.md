@@ -93,7 +93,7 @@ Thanks to TypedStruct, this is now possible :)
 To use TypedStruct in your project, add this to your Mix dependencies:
 
 ```elixir
-{:typedstruct, "~> 0.5"}
+{:typedstruct, "~> 0.6"}
 ```
 
 If you do not plan to compile modules using TypedStruct at runtime, you can add
@@ -318,8 +318,11 @@ If you need runtime validation/construction as well, combine with
 
 ### Documentation
 
-To add a `@typedoc` to the struct type, just add the attribute in the
-`typedstruct` block:
+TypedStruct supports comprehensive documentation through multiple attributes:
+
+#### Type Documentation with @typedoc
+
+Add a `@typedoc` attribute in the `typedstruct` block to document the type:
 
 ```elixir
 typedstruct do
@@ -330,7 +333,9 @@ typedstruct do
 end
 ```
 
-You can also document submodules this way:
+#### Module Documentation
+
+You can also document the entire module and submodules:
 
 ```elixir
 typedstruct module: MyStruct do
@@ -342,9 +347,34 @@ typedstruct module: MyStruct do
 end
 ```
 
-You can also document individual fields with the `doc` option. TypedStruct
-will append a generated `## Fields` section to the module documentation when
-running `mix docs` for both `typedstruct` and `typedrecord` blocks:
+#### Field Documentation
+
+Document individual fields in two ways:
+
+**1. Using the `doc:` option:**
+
+```elixir
+typedstruct do
+  field :a_string, String.t(), doc: "A string field"
+  field :an_int, integer(), doc: "An integer field"
+end
+```
+
+**2. Using the `@doc` attribute (applies to the next field):**
+
+```elixir
+typedstruct do
+  @doc "A string field"
+  field :a_string, String.t()
+
+  @doc "An integer field"
+  field :an_int, integer()
+end
+```
+
+The `@doc` attribute is automatically cleared after each field, ensuring it only documents the intended field. This approach is useful when you want to keep documentation close to the field definition.
+
+TypedStruct will append a generated `## Fields` section to the module documentation when running `mix docs` for both `typedstruct` and `typedrecord` blocks:
 
 ```elixir
 defmodule User do
@@ -406,6 +436,8 @@ defmodule MyStruct do
 end
 ```
 
+Presently plugins are not supported by the `typedrecord` block.
+
 #### Default Plugins
 
 You can specify default plugins when using TypedStruct, which will be automatically
@@ -434,9 +466,44 @@ end
 Now `MyApp.User` automatically has the `EctoTypes` plugin injected without needing
 to manually call `plugin MyApp.TypedStruct.Plugin.EctoTypes` in the `typedstruct` block.
 
-Presently plugins are not supported by the `typedrecord` block.
+### Ecto Integration
 
-### Some available plugins
+TypedStruct provides optional integration with Ecto through the `TypedStruct.Ecto` module, enabling you to define Ecto schemas with automatic type inference:
+
+```elixir
+defmodule User do
+  use TypedStruct.Ecto
+
+  typedschema "users" do
+    field      :id,      :id
+    field      :email,   :string, enforce: true
+    field      :name,    :string
+    field      :age,     :integer
+    belongs_to :company, Company
+    has_many   :posts,   Post
+    timestamps()
+  end
+end
+```
+
+The `typedschema` macro automatically infers Elixir types from Ecto field types, generates proper types for associations, supports polymorphic embeds, and enables type overrides with `::` syntax.
+
+**For comprehensive guide with examples, see [ecto.md](ecto.md):**
+- Field types and associations
+- Embedded and polymorphic schemas
+- Type overrides and custom types
+- Real-world examples (e-commerce, CMS, notifications)
+- Validation patterns
+- Comparison with [typed_ecto_schema](https://hex.pm/packages/typed_ecto_schema)
+
+### Built-in Integrations
+
+* `TypedStruct.Ecto` – Optional module providing `typedschema/2` macro for seamless
+  Ecto schema integration. Requires Ecto to be installed.
+* `TypedStruct.Plugin.EctoSchema` – Reference plugin showing how to build plugins for
+  external libraries.
+
+### Third-party Plugins
 
 * [`typedstruct_lens`](https://github.com/saleyn/typedstruct_lens) –
     Integration with the [Lens](https://github.com/obrok/lens) library.
@@ -448,6 +515,9 @@ Presently plugins are not supported by the `typedrecord` block.
   > All you need is a running instance of [Livebook](https://livebook.dev/)
   >
   > [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https://github.com/withbelay/typed_struct_ctor/blob/main/try_it_out.livemd)
+* [`typed_ecto_schema`](https://hex.pm/packages/typed_ecto_schema) –
+    Specialized library for Ecto schemas with automatic typespec generation for associations,
+    timestamps, and other Ecto-specific features.
 
 This list is not meant to be exhaustive, please [search for “typedstruct” on
 hex.pm](https://hex.pm/packages?search=typedstruct) for other results. If you
@@ -613,13 +683,13 @@ end
 * [x] Default values
 * [x] Enforced keys (non-nullable types)
 * [x] Plugin API
+* [x] Default value type-checking (is it possible?)
+* [x] Integration with [Lens](https://github.com/obrok/lens)
+* [x] Integration with [Ecto](https://github.com/elixir-ecto/ecto)
 
 ## Plugin ideas
 
-* [ ] Default value type-checking (is it possible?)
 * [ ] Guard generation
-* [x] Integration with [Lens](https://github.com/obrok/lens)
-* [ ] Integration with [Ecto](https://github.com/elixir-ecto/ecto)
 
 ## Related libraries
 
@@ -635,7 +705,5 @@ Before contributing to this project, please read the
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
-
-Copyright © 2018-2022 Jean-Philippe Cugnet and Contributors
 
 This project is licensed under the [MIT license](./LICENSE.md).

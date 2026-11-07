@@ -469,7 +469,31 @@ defmodule TypedStruct do
     * `enforce` - if set to true, enforces the field and makes its type
       non-nullable
     * `doc` - adds field-level documentation to the module docs under
-      a generated "Fields" section
+      a generated "Fields" section. If not provided, the `@doc` attribute
+      is used if present.
+
+  ## Field Documentation
+
+  You can document fields in two ways:
+
+  1. Using the `doc:` option:
+
+      ```elixir
+      field :name, String.t(), doc: "User's full name"
+      ```
+
+  2. Using the `@doc` attribute (documentation applies to the next field):
+
+      ```elixir
+      @doc "User's full name"
+      field :name, String.t()
+
+      @doc "User's email address"
+      field :email, String.t(), enforce: true
+      ```
+
+  The `@doc` attribute is automatically cleared after being applied to a field,
+  ensuring it only documents the intended field.
   """
   defmacro field(name, type, opts \\ []) do
     quote bind_quoted: [name: name, type: Macro.escape(type), opts: opts] do
@@ -908,8 +932,24 @@ defmodule TypedStruct do
 
   defp __validate_and_store_field_doc!(mod, name, opts) do
     case opts[:doc] do
-      nil -> :ok
-      doc when is_binary(doc) -> Module.put_attribute(mod, :ts_field_docs, {name, doc})
+      nil ->
+        # Try to infer from @doc attribute if present
+        case Module.get_attribute(mod, :doc) do
+          {_line, doc} when is_binary(doc) ->
+            Module.put_attribute(mod, :ts_field_docs, {name, doc})
+            # Clear @doc after using it so it doesn't apply to the next field
+            Module.delete_attribute(mod, :doc)
+
+          nil ->
+            :ok
+
+          invalid ->
+            raise ArgumentError,
+                  "the @doc attribute must be a string, got #{inspect(invalid)}"
+        end
+
+      doc when is_binary(doc) ->
+        Module.put_attribute(mod, :ts_field_docs, {name, doc})
 
       invalid ->
         raise ArgumentError,

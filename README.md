@@ -187,10 +187,10 @@ iex(1)> %Person{name: "Alice", age: 30}
 require Person
 
 iex(2)> Person.person(:name, "Alice")           # Create record
-{:person, "Alice", 0}
+Person.person(name: "Alice", age: 0)
 
-iex(3)> Person.person(person, :email, "alice@example.com")  # Update field
-{:person, "Alice", 0, "alice@example.com"}
+iex(3)> Person.person(person, :name, "Bob")     # Update field
+Person.person(name: "Bob", age: 0)
 ```
 
 Records generate macros (`/0`, `/1`, `/2`) that only work when the module is required. For normal Elixir code, prefer structs via `typedstruct`.
@@ -206,11 +206,8 @@ Person.person(name: "Alice", age: 30)
 iex(2)> IO.inspect(rec)
 Person.person(name: "Alice", age: 30)
 
-iex(3)> IO.inspect(rec, pretty: true)
-Person.person(name: "Alice", age: 30)
-
-iex(4)> {:person, "John", 30}
-Person.person(:name: "John", :age: 30)
+iex(4)> Person.person(name: "John", age: 30)
+Person.person(name: "John", age: 30)
 ```
 
 The `Inspect` protocol respects all standard options like `:pretty`, `:limit`, and `:width`.
@@ -219,31 +216,6 @@ The `Inspect` protocol respects all standard options like `:pretty`, `:limit`, a
 
 ```elixir
 config :typed_struct, :inspect_records, false
-```
-
-**Compilation warning:** You may see a compiler warning when using TypedStruct: `warning: redefining module Inspect.Tuple`. This is expected and intentional — it documents that we're replacing Elixir's built-in tuple inspection with our custom implementation for typed records. This warning:
-- Only appears during compilation, not at runtime
-- Does not affect functionality or performance
-- Can be ignored safely
-- Will not appear if you disable `:inspect_records` as shown above
-
-To convert a record to a map or keyword list:
-
-```elixir
-# Pattern matching to extract values
-iex(3)> {:person, name, age} = rec
-iex(4)> %{name: name, age: age}
-%{name: "Alice", age: 30}
-
-# Helper function in your module
-defmodule PersonHelper do
-  def to_map({:person, name, age}) do
-    %{name: name, age: age}
-  end
-end
-
-iex(5)> PersonHelper.to_map(rec)
-%{name: "Alice", age: 30}
 ```
 
 ### Options

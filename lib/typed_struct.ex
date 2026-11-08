@@ -37,6 +37,7 @@ defmodule TypedStruct do
   @typedrecord_options [
     :constructors,
     :docs,
+    :extract,
     :reflection,
     :module,
     :opaque,
@@ -274,6 +275,7 @@ defmodule TypedStruct do
   end
 
   # Catch the common mistake of calling typedrecord without a name
+  @spec typedrecord(term()) :: no_return()
   defmacro typedrecord(_block_expr) do
     raise ArgumentError,
           "typedrecord requires a record name as the first argument.\n\n" <>
@@ -347,10 +349,125 @@ defmodule TypedStruct do
   end
 
   @doc false
+  def __extract_erlang_fields__(name, hrl_path) do
+    # Use Record.extract to get fields from Erlang .hrl file
+    # Record.extract raises an exception if record not found, so we catch all exceptions
+    fields = Record.extract(name, from: hrl_path)
+
+    # Try to extract type info from the .hrl file
+    types_map = __extract_erlang_types__(name, hrl_path)
+
+    field_calls =
+      Enum.map(fields, fn
+        {field_name, :undefined} ->
+          type_spec = Map.get(types_map, field_name, quote do: term())
+          quote do
+            field unquote(field_name), unquote(type_spec)
+          end
+        {field_name, default_value} ->
+          type_spec = Map.get(types_map, field_name, quote do: term())
+          quote do
+            field unquote(field_name), unquote(type_spec), default: unquote(default_value)
+          end
+      end)
+
+    quote do
+      unquote_splicing(field_calls)
+    end
+  rescue
+    e in ArgumentError ->
+      reraise e, __STACKTRACE__
+    _ ->
+      error_msg =
+        "Error extracting record :#{name} from #{hrl_path}. " <>
+        if File.exists?(hrl_path) do
+          "Ensure the file is valid Erlang syntax."
+        else
+          "Ensure the file exists."
+        end
+      reraise ArgumentError.exception(error_msg), __STACKTRACE__
+  end
+
+  @doc false
+  def __extract_erlang_types__(name, hrl_path) do
+    # Parse Erlang type specs from .hrl file
+    case File.read(hrl_path) do
+      {:ok, content} -> extract_types_from_content(name, content)
+      {:error, _} -> %{}
+    end
+  end
+
+  defp extract_types_from_content(name, content) do
+    pattern = ~r/-record\(\s*#{name}\s*,\s*\{([^}]+)\}\s*\)/s
+    case Regex.run(pattern, content, capture: :all_but_first) do
+      [fields_str] -> parse_fields_string(fields_str)
+      _ -> %{}
+    end
+  end
+
+  defp parse_fields_string(fields_str) do
+    fields_str
+    |> String.split(",")
+    |> Enum.reduce(%{}, fn field_def, acc ->
+      case parse_erlang_field_type(field_def) do
+        {field_name, type_ast} -> Map.put(acc, field_name, type_ast)
+        nil -> acc
+      end
+    end)
+  end
+
+  defp parse_erlang_field_type(field_def) do
+    field_def = String.trim(field_def)
+    case String.split(field_def, "::") do
+      [_default_part, type_part] ->
+        type_str = String.trim(type_part) |> String.trim_trailing()
+        type_ast = erlang_type_to_elixir(type_str)
+        field_name = extract_field_name(field_def)
+        {field_name, type_ast}
+
+      _ ->
+        nil
+    end
+  end
+
+  defp extract_field_name(field_def) do
+    field_def
+    |> String.trim()
+    |> String.split("=")
+    |> List.first()
+    |> String.trim()
+    |> String.to_atom()
+  end
+
+  @erlang_type_map %{
+    "integer()" => quote(do: integer()),
+    "string()" => quote(do: charlist()),
+    "binary()" => quote(do: binary()),
+    "boolean()" => quote(do: boolean()),
+    "atom()" => quote(do: atom()),
+    "float()" => quote(do: float()),
+    "number()" => quote(do: number()),
+    "list()" => quote(do: list())
+  }
+
+  defp erlang_type_to_elixir(type_str) do
+    Map.get(@erlang_type_map, String.trim(type_str), quote(do: term()))
+  end
+
+  @doc false
   def __typedrecord__(name, block, opts) do
     tag = Keyword.get(opts, :tag, name)
     docs_mode = TypedStruct.__docs_mode__(opts)
     generated_blocks = __typedrecord_generated_blocks__(name, tag, opts)
+
+    # Process extracted fields from .hrl file if provided
+    extract_block =
+      case Keyword.get(opts, :extract) do
+        nil ->
+          nil
+        hrl_path ->
+          __extract_erlang_fields__(name, hrl_path)
+      end
 
     quote do
       Enum.each(unquote(@record_accumulating_attrs), fn attr ->
@@ -370,6 +487,7 @@ defmodule TypedStruct do
         plugin.init(plugin_opts)
       end
 
+      unquote(extract_block)
       unquote(block)
       TypedStruct.__append_field_docs__(__MODULE__, unquote(docs_mode))
       Record.defrecord(unquote(name), unquote(tag), Enum.reverse(@ts_fields))
@@ -757,7 +875,6 @@ defmodule TypedStruct do
     Enum.map_join(errors, "; ", fn {_kind, message} -> message end)
   end
 
-
   defp __typedstruct_generated_blocks__(opts) do
     []
     |> __maybe_add_simple_new__(opts)
@@ -1022,62 +1139,6 @@ defmodule TypedStruct do
     quote do
       unquote_splicing(fields_block)
       unquote_splicing(after_definition_block)
-    end
-  end
-end
-
-# Generic Inspect implementation for typed records
-# Uses persistent_term to look up field metadata registered during record compilation
-# Disable via config: config :typed_struct, :inspect_records, false
-if Application.compile_env(:typed_struct, :inspect_records, true) do
-  defimpl Inspect, for: Tuple do
-    def inspect(tuple, opts) do
-      case elem(tuple, 0) do
-        tag when is_atom(tag) and tuple_size(tuple) > 1 ->
-          # Look up metadata for this record tag in persistent_term
-          metadata = :persistent_term.get({:typed_record_fields, tag}, nil)
-
-          if metadata && tuple_size(tuple) == metadata.count + 1 do
-            # Format as: Module.tag(field1: val1, field2: val2, ...)
-            %{fields: field_names, module: module} = metadata
-            [_tag | values] = Tuple.to_list(tuple)
-            fields = Enum.zip(field_names, values)
-
-            # Build field documents respecting the inspect options
-            inner_docs =
-              Enum.map(fields, fn {k, v} ->
-                Inspect.Algebra.concat([
-                  Inspect.Algebra.to_doc(k, opts),
-                  ": ",
-                  Inspect.Algebra.to_doc(v, opts)
-                ])
-              end)
-
-            # Join with commas and build the final document
-            Inspect.Algebra.concat(
-              ["#{module}.#{tag}("] ++
-                Enum.intersperse(inner_docs, ", ") ++
-                [")"]
-            )
-          else
-            # Not a known record, format as regular tuple
-            format_regular_tuple(tuple, opts)
-          end
-
-        _ ->
-          # Not a record, format as regular tuple
-          format_regular_tuple(tuple, opts)
-      end
-    end
-
-    defp format_regular_tuple(tuple, _opts) do
-      # Format tuple manually: {elem1, elem2, ...}
-      elements = Tuple.to_list(tuple) |> Enum.map(&inspect/1)
-      Inspect.Algebra.concat([
-        "{",
-        Enum.join(elements, ", "),
-        "}"
-      ])
     end
   end
 end

@@ -314,6 +314,100 @@ These helpers are intended for tooling, schema inspection, and diagnostics.
 If you need runtime validation/construction as well, combine with
 `constructors: true`.
 
+## Common Patterns
+
+### Validated Constructors
+
+Enable `constructors: true` to automatically generate constructor functions that validate input:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  typedstruct constructors: true do
+    field :name, String.t(), enforce: true
+    field :age, integer()
+  end
+end
+
+# Generated functions:
+User.new(name: "Alice", age: 30)          # Returns %User{...}
+User.new!(name: "Alice")                  # Raises on missing required fields
+User.from_map(%{"name" => "Alice"})       # Convert from map
+User.from_keyword(name: "Alice")          # Convert from keyword list
+
+# For typedrecord :person, generates:
+# People.person_new/1, person_new!/1, person_from_map/1, person_from_keyword/1
+```
+
+### Strict Mode
+
+Use `strict: true` to ensure all fields either have `enforce: true` or a default value:
+
+```elixir
+defmodule StrictUser do
+  use TypedStruct
+
+  typedstruct strict: true do
+    field :id, integer(), enforce: true
+    field :name, String.t(), enforce: true
+    field :active, boolean(), default: true
+    # field :email, String.t()  # Error: must have enforce or default!
+  end
+end
+```
+
+This prevents accidental creation of structs with undefined fields and ensures compile-time safety.
+
+### Dynamic Defaults
+
+Use `default_fn: &Module.function/0` for values that should be computed at construction time:
+
+```elixir
+defmodule Token do
+  use TypedStruct
+
+  defmodule Defaults do
+    def token, do: :crypto.strong_rand_bytes(32) |> Base.encode16()
+    def timestamp, do: System.os_time(:second)
+  end
+
+  typedstruct do
+    field :value, binary(), default_fn: &Defaults.token/0
+    field :created_at, integer(), default_fn: &Defaults.timestamp/0
+  end
+end
+
+# Each new token gets a fresh random value and timestamp
+Token.new()  # => %Token{value: "A1B2C3...", created_at: 1699000000}
+Token.new()  # => %Token{value: "D4E5F6...", created_at: 1699000010}
+```
+
+### Combined: Constructors + Reflection + Strict
+
+Combining these features creates robust, inspectable structs:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  typedstruct constructors: true, reflection: true, strict: true do
+    field :id, integer(), enforce: true
+    field :email, String.t(), enforce: true
+    field :active, boolean(), default: true
+    field :created_at, integer(), default_fn: &System.os_time(:second)
+  end
+end
+
+# Safe construction with validation
+user = User.new!(id: 1, email: "alice@example.com")
+
+# Runtime introspection
+User.__fields__()          # [:id, :email, :active, :created_at]
+User.__required__()        # [:id, :email]
+User.__defaults__()        # %{active: true, created_at: 1699000000}
+```
+
 ### Documentation
 
 TypedStruct supports comprehensive documentation through multiple attributes:
@@ -879,6 +973,100 @@ People.person_fields()
 These helpers are intended for tooling, schema inspection, and diagnostics.
 If you need runtime validation/construction as well, combine with
 `constructors: true`.
+
+## Common Patterns
+
+### Validated Constructors
+
+Enable `constructors: true` to automatically generate constructor functions that validate input:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  typedstruct constructors: true do
+    field :name, String.t(), enforce: true
+    field :age, integer()
+  end
+end
+
+# Generated functions:
+User.new(name: "Alice", age: 30)          # Returns %User{...}
+User.new!(name: "Alice")                  # Raises on missing required fields
+User.from_map(%{"name" => "Alice"})       # Convert from map
+User.from_keyword(name: "Alice")          # Convert from keyword list
+
+# For typedrecord :person, generates:
+# People.person_new/1, person_new!/1, person_from_map/1, person_from_keyword/1
+```
+
+### Strict Mode
+
+Use `strict: true` to ensure all fields either have `enforce: true` or a default value:
+
+```elixir
+defmodule StrictUser do
+  use TypedStruct
+
+  typedstruct strict: true do
+    field :id, integer(), enforce: true
+    field :name, String.t(), enforce: true
+    field :active, boolean(), default: true
+    # field :email, String.t()  # Error: must have enforce or default!
+  end
+end
+```
+
+This prevents accidental creation of structs with undefined fields and ensures compile-time safety.
+
+### Dynamic Defaults
+
+Use `default_fn: &Module.function/0` for values that should be computed at construction time:
+
+```elixir
+defmodule Token do
+  use TypedStruct
+
+  defmodule Defaults do
+    def token, do: :crypto.strong_rand_bytes(32) |> Base.encode16()
+    def timestamp, do: System.os_time(:second)
+  end
+
+  typedstruct do
+    field :value, binary(), default_fn: &Defaults.token/0
+    field :created_at, integer(), default_fn: &Defaults.timestamp/0
+  end
+end
+
+# Each new token gets a fresh random value and timestamp
+Token.new()  # => %Token{value: "A1B2C3...", created_at: 1699000000}
+Token.new()  # => %Token{value: "D4E5F6...", created_at: 1699000010}
+```
+
+### Combined: Constructors + Reflection + Strict
+
+Combining these features creates robust, inspectable structs:
+
+```elixir
+defmodule User do
+  use TypedStruct
+
+  typedstruct constructors: true, reflection: true, strict: true do
+    field :id, integer(), enforce: true
+    field :email, String.t(), enforce: true
+    field :active, boolean(), default: true
+    field :created_at, integer(), default_fn: &System.os_time(:second)
+  end
+end
+
+# Safe construction with validation
+user = User.new!(id: 1, email: "alice@example.com")
+
+# Runtime introspection
+User.__fields__()          # [:id, :email, :active, :created_at]
+User.__required__()        # [:id, :email]
+User.__defaults__()        # %{active: true, created_at: 1699000000}
+```
 
 ### Documentation
 

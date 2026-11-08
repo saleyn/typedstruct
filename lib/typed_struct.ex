@@ -51,7 +51,7 @@ defmodule TypedStruct do
 
     quote do
       import TypedStruct,
-        only: [typedstruct: 1, typedstruct: 2, typedrecord: 2, typedrecord: 3]
+        only: [typedstruct: 1, typedstruct: 2, typedrecord: 1, typedrecord: 2, typedrecord: 3]
 
       @typedstruct_default_plugins unquote(plugins)
     end
@@ -205,6 +205,12 @@ defmodule TypedStruct do
   Inside a `typedrecord` block, each field is defined through the `field/2`
   macro.
 
+  ## Arguments
+
+    * `name` - the record tag name (required, must be an atom). This identifies
+      the record and is used in generated function names (e.g., `:person` generates
+      `person_new/1`, `person_from_map/1`, etc.).
+
   ## Options
 
     * `tag` - if set, used as the `tag` parameter passed to `Record.defrecord/3`.
@@ -265,6 +271,16 @@ defmodule TypedStruct do
           end
         end
     end
+  end
+
+  # Catch the common mistake of calling typedrecord without a name
+  defmacro typedrecord(_block_expr) do
+    raise ArgumentError,
+          "typedrecord requires a record name as the first argument.\n\n" <>
+          "  Incorrect:  typedrecord do ... end\n" <>
+          "  Correct:    typedrecord :name do ... end\n\n" <>
+          "The record name identifies the record and is used in generated function names " <>
+          "(e.g., :person generates person_new/1, person_from_map/1, etc.)."
   end
 
   @doc false
@@ -366,6 +382,17 @@ defmodule TypedStruct do
       )
 
       unquote_splicing(generated_blocks)
+
+      # Register this typed record in persistent_term for runtime Inspect support
+      field_names_for_inspect = Keyword.keys(Enum.reverse(@ts_fields))
+      # Get module name without "Elixir." prefix for cleaner output
+      module_name = Module.split(__MODULE__) |> Enum.join(".")
+      record_metadata = %{
+        fields: field_names_for_inspect,
+        count: length(field_names_for_inspect),
+        module: module_name
+      }
+      :persistent_term.put({:typed_record_fields, unquote(tag)}, record_metadata)
 
       # Clean up accumulating attributes after each record definition
       Enum.each(unquote(@record_accumulating_attrs), fn attr ->
@@ -730,6 +757,7 @@ defmodule TypedStruct do
     Enum.map_join(errors, "; ", fn {_kind, message} -> message end)
   end
 
+
   defp __typedstruct_generated_blocks__(opts) do
     []
     |> __maybe_add_simple_new__(opts)
@@ -803,7 +831,7 @@ defmodule TypedStruct do
           def __required__, do: Enum.reverse(@ts_enforce_keys)
           def __defaults__, do: Map.new(Enum.reverse(@ts_fields))
           def __dynamic_defaults__, do: Keyword.keys(Enum.reverse(@ts_dynamic_defaults))
-          def __types__, do: @ts_types
+          def __types__, do: Enum.reverse(@ts_types)
         end
 
       [reflection_block | blocks]
@@ -863,7 +891,7 @@ defmodule TypedStruct do
           def unquote(required_fun)(), do: Enum.reverse(@ts_enforce_keys)
           def unquote(defaults_fun)(), do: Map.new(Enum.reverse(@ts_fields))
           def unquote(dynamic_defaults_fun)(), do: Keyword.keys(Enum.reverse(@ts_dynamic_defaults))
-          def unquote(types_fun)(), do: @ts_types
+          def unquote(types_fun)(), do: Enum.reverse(@ts_types)
         end
 
       [reflection_block | blocks]
@@ -994,6 +1022,62 @@ defmodule TypedStruct do
     quote do
       unquote_splicing(fields_block)
       unquote_splicing(after_definition_block)
+    end
+  end
+end
+
+# Generic Inspect implementation for typed records
+# Uses persistent_term to look up field metadata registered during record compilation
+# Disable via config: config :typed_struct, :inspect_records, false
+if Application.compile_env(:typed_struct, :inspect_records, true) do
+  defimpl Inspect, for: Tuple do
+    def inspect(tuple, opts) do
+      case elem(tuple, 0) do
+        tag when is_atom(tag) and tuple_size(tuple) > 1 ->
+          # Look up metadata for this record tag in persistent_term
+          metadata = :persistent_term.get({:typed_record_fields, tag}, nil)
+
+          if metadata && tuple_size(tuple) == metadata.count + 1 do
+            # Format as: Module.tag(field1: val1, field2: val2, ...)
+            %{fields: field_names, module: module} = metadata
+            [_tag | values] = Tuple.to_list(tuple)
+            fields = Enum.zip(field_names, values)
+
+            # Build field documents respecting the inspect options
+            inner_docs =
+              Enum.map(fields, fn {k, v} ->
+                Inspect.Algebra.concat([
+                  Inspect.Algebra.to_doc(k, opts),
+                  ": ",
+                  Inspect.Algebra.to_doc(v, opts)
+                ])
+              end)
+
+            # Join with commas and build the final document
+            Inspect.Algebra.concat(
+              ["#{module}.#{tag}("] ++
+                Enum.intersperse(inner_docs, ", ") ++
+                [")"]
+            )
+          else
+            # Not a known record, format as regular tuple
+            format_regular_tuple(tuple, opts)
+          end
+
+        _ ->
+          # Not a record, format as regular tuple
+          format_regular_tuple(tuple, opts)
+      end
+    end
+
+    defp format_regular_tuple(tuple, _opts) do
+      # Format tuple manually: {elem1, elem2, ...}
+      elements = Tuple.to_list(tuple) |> Enum.map(&inspect/1)
+      Inspect.Algebra.concat([
+        "{",
+        Enum.join(elements, ", "),
+        "}"
+      ])
     end
   end
 end

@@ -178,11 +178,8 @@ defmodule TypedRecordTest do
   end
 
   test "Typedrecord missing record name" do
-    assert_raise CompileError,
-                 if(Version.compare(System.version(), "1.14.9") == :lt,
-                   do: ~r"undefined function typedrecord/1",
-                   else: ~r"cannot compile module TypedRecordTest.ScopeTest"
-                 ),
+    assert_raise ArgumentError,
+                 ~r/typedrecord requires a record name as the first argument/,
                  fn ->
                    ExUnit.CaptureIO.capture_io(:stderr, fn ->
                      defmodule ScopeTest do
@@ -252,5 +249,37 @@ defmodule TypedRecordTest do
 
     assert first() == {:first, 42}
     assert second() == {:second, "hello"}
+  end
+
+  test "typed records are pretty-printed without outer quotes" do
+    import RecordConstructors, only: [user: 1]
+
+    rec = user(id: 1, name: "Alice", token: "token123")
+    inspected = inspect(rec)
+
+    # Should NOT have outer quotes
+    refute String.starts_with?(inspected, "\"")
+    refute String.ends_with?(inspected, "\"")
+
+    # Should have the record format
+    assert String.starts_with?(inspected, "TypedRecordTest.RecordConstructors.user(")
+    assert String.ends_with?(inspected, ")")
+
+    # Field names should be present
+    assert inspected =~ "id: 1"
+    assert inspected =~ "name: \"Alice\""
+    assert inspected =~ "token: \"token123\""
+  end
+
+  test "non-record tuples use default tuple printing" do
+    regular_tuple = {:mytag, "value", 123}
+    inspected = inspect(regular_tuple)
+
+    # Should use curly braces for regular tuples
+    assert String.starts_with?(inspected, "{")
+    assert String.ends_with?(inspected, "}")
+    assert inspected =~ ":mytag"
+    assert inspected =~ "\"value\""
+    assert inspected =~ "123"
   end
 end

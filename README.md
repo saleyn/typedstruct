@@ -145,10 +145,105 @@ defmodule Person do
   typedrecord :person do
     @typedoc "A person"
 
-    field :name, String.t(),
+    field :name, String.t()
     field :age,  non_neg_integer(), default: 0
   end
 end
+```
+
+**Note on Records:** Records in Elixir are compile-time constructs that generate macros, not runtime functions. You cannot call them like regular functions at runtime. They're best suited for Erlang interop and pattern matching.
+
+```elixir
+iex(2)> Person.person()
+** (UndefinedFunctionError) function Person.person/0 is undefined or private. However, there is a macro with the same name and arity. Be sure to require Person if you intend to invoke this macro
+    Person.person()
+    iex:10: (file)
+iex(2)> require Person    # <-- This is essential!
+Person
+iex(3)> Person.person()
+Person.person(name: nil, age: 0)
+iex(4)> rec = Person.person(name: "John")
+Person.person(name: "John", age: 0)
+iex(5)> Person.person(rec, name: "Alex")
+Person.person(name: "Alex", age: 0)
+```
+For most Elixir code, use `typedstruct` instead:
+
+```elixir
+# With typedstruct - works naturally at runtime
+defmodule Person do
+  use TypedStruct
+
+  typedstruct do
+    field :name, String.t()
+    field :age, non_neg_integer(), default: 0
+  end
+end
+
+iex(1)> %Person{name: "Alice", age: 30}
+%Person{name: "Alice", age: 30}
+
+# With typedrecord - requires `require` and special macro syntax
+require Person
+
+iex(2)> Person.person(:name, "Alice")           # Create record
+{:person, "Alice", 0}
+
+iex(3)> Person.person(person, :email, "alice@example.com")  # Update field
+{:person, "Alice", 0, "alice@example.com"}
+```
+
+Records generate macros (`/0`, `/1`, `/2`) that only work when the module is required. For normal Elixir code, prefer structs via `typedstruct`.
+
+**Pretty-printing records:** Records print nicely formatted in the shell without outer quotes:
+
+```elixir
+require Person
+
+iex(1)> rec = Person.person(name: "Alice", age: 30)
+Person.person(name: "Alice", age: 30)
+
+iex(2)> IO.inspect(rec)
+Person.person(name: "Alice", age: 30)
+
+iex(3)> IO.inspect(rec, pretty: true)
+Person.person(name: "Alice", age: 30)
+
+iex(4)> {:person, "John", 30}
+Person.person(:name: "John", :age: 30)
+```
+
+The `Inspect` protocol respects all standard options like `:pretty`, `:limit`, and `:width`.
+
+**Disabling custom record inspection:** TypedStruct implements a custom `Inspect` protocol for tuples to provide this nice formatting. If you want to use the default Elixir tuple inspection instead, disable it in your config:
+
+```elixir
+config :typed_struct, :inspect_records, false
+```
+
+**Compilation warning:** You may see a compiler warning when using TypedStruct: `warning: redefining module Inspect.Tuple`. This is expected and intentional — it documents that we're replacing Elixir's built-in tuple inspection with our custom implementation for typed records. This warning:
+- Only appears during compilation, not at runtime
+- Does not affect functionality or performance
+- Can be ignored safely
+- Will not appear if you disable `:inspect_records` as shown above
+
+To convert a record to a map or keyword list:
+
+```elixir
+# Pattern matching to extract values
+iex(3)> {:person, name, age} = rec
+iex(4)> %{name: name, age: age}
+%{name: "Alice", age: 30}
+
+# Helper function in your module
+defmodule PersonHelper do
+  def to_map({:person, name, age}) do
+    %{name: name, age: age}
+  end
+end
+
+iex(5)> PersonHelper.to_map(rec)
+%{name: "Alice", age: 30}
 ```
 
 ### Options

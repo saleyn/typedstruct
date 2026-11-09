@@ -91,12 +91,10 @@ end
 To use TypedStruct in your project, add this to your Mix dependencies:
 
 ```elixir
-{:typedstruct, "~> 0.6"}
+{:typedstruct, "~> 0.6", runtime: false}
 ```
 
-If you do not plan to compile modules using TypedStruct at runtime, you can add
-`runtime: false` to the dependency tuple as TypedStruct is only used at build
-time.
+**Recommended:** Always use `runtime: false` since TypedStruct is a compile-time macro library with no runtime dependencies. It expands to standard Elixir code during compilation and is not needed at runtime. This optimizes your application's memory footprint and start time.
 
 If you want to avoid `mix format` putting parentheses on field definitions,
 you can add to your `.formatter.exs`:

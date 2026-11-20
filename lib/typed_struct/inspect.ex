@@ -1,11 +1,16 @@
 # Generic Inspect implementation for typed records
 # Uses persistent_term to look up field metadata registered during record compilation
-# Disable via config: config :typed_struct, :inspect_records, false
+# Disable via config: config :typedstruct, :inspect_records, false
+# (the older `:typed_struct` key is still read as a fallback)
 
 # Disable warning about redefining the built-in Inspect.Tuple protocol
 Code.compiler_options(ignore_module_conflict: true)
 
-if Application.compile_env(:typed_struct, :inspect_records, true) do
+if Application.compile_env(
+     :typedstruct,
+     :inspect_records,
+     Application.compile_env(:typed_struct, :inspect_records, true)
+   ) do
   defimpl Inspect, for: Tuple do
     def inspect(tuple, opts) do
       case elem(tuple, 0) do

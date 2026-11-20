@@ -213,7 +213,7 @@ The `Inspect` protocol respects all standard options like `:pretty`, `:limit`, a
 **Disabling custom record inspection:** TypedStruct implements a custom `Inspect` protocol for tuples to provide this nice formatting. If you want to use the default Elixir tuple inspection instead, disable it in your config:
 
 ```elixir
-config :typed_struct, :inspect_records, false
+config :typedstruct, :inspect_records, false
 ```
 
 ### Options
